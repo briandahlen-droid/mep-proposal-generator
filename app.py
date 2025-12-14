@@ -66,16 +66,16 @@ def add_footer(section, text_left, text_center, text_right):
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     table.autofit = False
     
-    # Set column widths - make center wider for one-line address
-    table.columns[0].width = Inches(1.1)   # kimley-horn.com
-    table.columns[1].width = Inches(5.3)   # address (wider for one line)
-    table.columns[2].width = Inches(1.1)   # phone
+    # Set column widths - center much wider for one-line address
+    table.columns[0].width = Inches(1.0)   # kimley-horn.com
+    table.columns[1].width = Inches(5.5)   # address (much wider)
+    table.columns[2].width = Inches(1.0)   # phone
     
     # Style cells
     cells = table.rows[0].cells
     
     # Border color (darker pink/red)
-    border_color = 'C27B7B'
+    border_color = 'C48888'
     
     # Helper function to add cell borders
     def add_cell_border(cell, color):
@@ -85,7 +85,7 @@ def add_footer(section, text_left, text_center, text_right):
         for border_name in ['top', 'left', 'bottom', 'right']:
             border = OxmlElement(f'w:{border_name}')
             border.set(qn('w:val'), 'single')
-            border.set(qn('w:sz'), '6')  # border width
+            border.set(qn('w:sz'), '4')  # thin border
             border.set(qn('w:color'), color)
             tcBorders.append(border)
         tcPr.append(tcBorders)
@@ -97,20 +97,20 @@ def add_footer(section, text_left, text_center, text_right):
         tcMar = OxmlElement('w:tcMar')
         for margin_name in ['top', 'bottom']:
             margin = OxmlElement(f'w:{margin_name}')
-            margin.set(qn('w:w'), '30')  # minimal top/bottom margin
+            margin.set(qn('w:w'), '15')  # very minimal top/bottom
             margin.set(qn('w:type'), 'dxa')
             tcMar.append(margin)
         for margin_name in ['left', 'right']:
             margin = OxmlElement(f'w:{margin_name}')
-            margin.set(qn('w:w'), '60')  # small left/right margin
+            margin.set(qn('w:w'), '40')  # small left/right
             margin.set(qn('w:type'), 'dxa')
             tcMar.append(margin)
         tcPr.append(tcMar)
     
-    # Left cell - gray background with border
+    # Left cell - gray background
     cells[0].text = text_left
     cell_shading = OxmlElement('w:shd')
-    cell_shading.set(qn('w:fill'), '808080')  # Gray
+    cell_shading.set(qn('w:fill'), '8C8C8C')  # Gray
     cells[0]._tc.get_or_add_tcPr().append(cell_shading)
     add_cell_border(cells[0], border_color)
     set_cell_margins(cells[0])
@@ -118,15 +118,16 @@ def add_footer(section, text_left, text_center, text_right):
         paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
         paragraph.paragraph_format.space_before = Pt(0)
         paragraph.paragraph_format.space_after = Pt(0)
+        paragraph.paragraph_format.line_spacing = 1.0
         for run in paragraph.runs:
             run.font.size = Pt(8)
             run.font.color.rgb = RGBColor(255, 255, 255)
             run.font.name = 'Calibri'
     
-    # Center cell - pink/salmon background with border
+    # Center cell - pink/salmon background
     cells[1].text = text_center
     cell_shading = OxmlElement('w:shd')
-    cell_shading.set(qn('w:fill'), 'DAAAA5')  # Pink/salmon
+    cell_shading.set(qn('w:fill'), 'D5A6A6')  # Pink/salmon
     cells[1]._tc.get_or_add_tcPr().append(cell_shading)
     add_cell_border(cells[1], border_color)
     set_cell_margins(cells[1])
@@ -134,15 +135,16 @@ def add_footer(section, text_left, text_center, text_right):
         paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
         paragraph.paragraph_format.space_before = Pt(0)
         paragraph.paragraph_format.space_after = Pt(0)
+        paragraph.paragraph_format.line_spacing = 1.0
         for run in paragraph.runs:
             run.font.size = Pt(8)
             run.font.color.rgb = RGBColor(0, 0, 0)
             run.font.name = 'Calibri'
     
-    # Right cell - pink/salmon background with border
+    # Right cell - pink/salmon background
     cells[2].text = text_right
     cell_shading = OxmlElement('w:shd')
-    cell_shading.set(qn('w:fill'), 'DAAAA5')  # Pink/salmon
+    cell_shading.set(qn('w:fill'), 'D5A6A6')  # Pink/salmon
     cells[2]._tc.get_or_add_tcPr().append(cell_shading)
     add_cell_border(cells[2], border_color)
     set_cell_margins(cells[2])
@@ -150,12 +152,13 @@ def add_footer(section, text_left, text_center, text_right):
         paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
         paragraph.paragraph_format.space_before = Pt(0)
         paragraph.paragraph_format.space_after = Pt(0)
+        paragraph.paragraph_format.line_spacing = 1.0
         for run in paragraph.runs:
             run.font.size = Pt(8)
             run.font.color.rgb = RGBColor(0, 0, 0)
             run.font.name = 'Calibri'
     
-    # Remove default table borders (we set them on cells instead)
+    # Remove default table borders
     tbl = table._tbl
     tblPr = tbl.tblPr if tbl.tblPr is not None else OxmlElement('w:tblPr')
     tblBorders = OxmlElement('w:tblBorders')
