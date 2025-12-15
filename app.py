@@ -67,15 +67,17 @@ def add_footer(section, text_left, text_center, text_right):
     table.autofit = False
     
     # Set column widths - center widest for one-line address, sides minimal
-    table.columns[0].width = Inches(1.0)   # kimley-horn.com (minimal)
-    table.columns[1].width = Inches(4.6)   # address (wide for one line)
-    table.columns[2].width = Inches(0.9)   # phone (minimal)
+    table.columns[0].width = Inches(0.95)   # kimley-horn.com (minimal)
+    table.columns[1].width = Inches(4.8)    # address (wide for one line)
+    table.columns[2].width = Inches(0.75)   # phone (minimal)
     
     # Style cells
     cells = table.rows[0].cells
     
-    # Border color (darker pink/red)
-    border_color = 'C48888'
+    # Colors from Kimley-Horn brand
+    grey_fill = 'C7C8CA'      # Grey for left cell
+    salmon_fill = 'A20C33'    # Salmon for middle and right cells
+    border_color = 'A20C33'   # Salmon for borders
     
     # Helper function to add cell borders
     def add_cell_border(cell, color):
@@ -107,10 +109,10 @@ def add_footer(section, text_left, text_center, text_right):
             tcMar.append(margin)
         tcPr.append(tcMar)
     
-    # Left cell - gray background
+    # Left cell - grey background
     cells[0].text = text_left
     cell_shading = OxmlElement('w:shd')
-    cell_shading.set(qn('w:fill'), '8C8C8C')  # Gray
+    cell_shading.set(qn('w:fill'), grey_fill)
     cells[0]._tc.get_or_add_tcPr().append(cell_shading)
     add_cell_border(cells[0], border_color)
     set_cell_margins(cells[0])
@@ -124,10 +126,10 @@ def add_footer(section, text_left, text_center, text_right):
             run.font.color.rgb = RGBColor(255, 255, 255)
             run.font.name = 'Calibri'
     
-    # Center cell - pink/salmon background
+    # Center cell - salmon background
     cells[1].text = text_center
     cell_shading = OxmlElement('w:shd')
-    cell_shading.set(qn('w:fill'), 'D5A6A6')  # Pink/salmon
+    cell_shading.set(qn('w:fill'), salmon_fill)
     cells[1]._tc.get_or_add_tcPr().append(cell_shading)
     add_cell_border(cells[1], border_color)
     set_cell_margins(cells[1])
@@ -138,13 +140,13 @@ def add_footer(section, text_left, text_center, text_right):
         paragraph.paragraph_format.line_spacing = 1.0
         for run in paragraph.runs:
             run.font.size = Pt(8)
-            run.font.color.rgb = RGBColor(0, 0, 0)
+            run.font.color.rgb = RGBColor(255, 255, 255)  # White text on salmon
             run.font.name = 'Calibri'
     
-    # Right cell - pink/salmon background
+    # Right cell - salmon background
     cells[2].text = text_right
     cell_shading = OxmlElement('w:shd')
-    cell_shading.set(qn('w:fill'), 'D5A6A6')  # Pink/salmon
+    cell_shading.set(qn('w:fill'), salmon_fill)
     cells[2]._tc.get_or_add_tcPr().append(cell_shading)
     add_cell_border(cells[2], border_color)
     set_cell_margins(cells[2])
@@ -155,7 +157,7 @@ def add_footer(section, text_left, text_center, text_right):
         paragraph.paragraph_format.line_spacing = 1.0
         for run in paragraph.runs:
             run.font.size = Pt(8)
-            run.font.color.rgb = RGBColor(0, 0, 0)
+            run.font.color.rgb = RGBColor(255, 255, 255)  # White text on salmon
             run.font.name = 'Calibri'
     
     # Remove default table borders
@@ -239,33 +241,55 @@ def create_proposal_document(data):
     # Date
     p = doc.add_paragraph()
     p.add_run(data['date'])
-    p.paragraph_format.space_after = Pt(20)
+    p.paragraph_format.space_after = Pt(0)
     
-    # Recipient
+    # Recipient - all on connected lines with no extra spacing
     p = doc.add_paragraph()
+    p.paragraph_format.space_after = Pt(0)
     p.add_run(f"{data['client_title']} {data['client_contact']}")
-    p = doc.add_paragraph()
-    p.add_run(data['company_name'])
-    p = doc.add_paragraph()
-    p.add_run(data['address1'])
-    p = doc.add_paragraph()
-    p.add_run(data['address2'])
-    p.paragraph_format.space_after = Pt(20)
     
-    # Re: line
     p = doc.add_paragraph()
+    p.paragraph_format.space_after = Pt(0)
+    p.add_run(data['company_name'])
+    
+    if data.get('address1'):
+        p = doc.add_paragraph()
+        p.paragraph_format.space_after = Pt(0)
+        p.add_run(data['address1'])
+    
+    if data.get('address2'):
+        p = doc.add_paragraph()
+        p.paragraph_format.space_after = Pt(0)
+        p.add_run(data['address2'])
+    
+    # Add space before Re: line
+    p = doc.add_paragraph()
+    p.paragraph_format.space_after = Pt(0)
+    
+    # Re: line - formatted properly
+    p = doc.add_paragraph()
+    p.paragraph_format.space_after = Pt(0)
     p.add_run("Re:\tLetter Agreement for Professional Services for")
+    
     p = doc.add_paragraph()
-    p.add_run(f"\t{data['project_name']}")
+    p.paragraph_format.space_after = Pt(0)
+    p.paragraph_format.left_indent = Inches(0.5)
+    p.add_run(data['project_name'])
+    
     p = doc.add_paragraph()
-    p.add_run(f"\t{data['project_address']}, {data['project_city']}, {data['project_state']}")
-    p.paragraph_format.space_after = Pt(20)
+    p.paragraph_format.space_after = Pt(0)
+    p.paragraph_format.left_indent = Inches(0.5)
+    p.add_run(f"{data['project_address']}, {data['project_city']}, {data['project_state']}")
+    
+    # Add space before salutation
+    p = doc.add_paragraph()
+    p.paragraph_format.space_after = Pt(0)
     
     # Salutation
     last_name = data['client_contact'].split()[-1] if data['client_contact'] else "XXX"
     p = doc.add_paragraph()
     p.add_run(f"Dear {data['client_title']} {last_name}:")
-    p.paragraph_format.space_after = Pt(12)
+    p.paragraph_format.space_after = Pt(0)
     
     # Opening paragraph
     p = doc.add_paragraph()
