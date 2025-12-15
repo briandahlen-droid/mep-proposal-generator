@@ -112,7 +112,7 @@ def format_currency(value):
 
 
 def add_footer(section, text_left, text_center, text_right):
-    """Add a colored footer with three sections - exact specs: 1.1", 4.23", 0.96", height 0.22" """
+    """Add a colored footer with three sections - exact specs: 1.1", 4.23", 0.96" """
     footer = section.footer
     footer.is_linked_to_previous = False
     
@@ -128,8 +128,8 @@ def add_footer(section, text_left, text_center, text_right):
     
     cells = table.rows[0].cells
     
-    # Set exact row height to 0.22"
-    table.rows[0].height = Inches(0.22)
+    # Set row height (removed strict height rule that was causing issues)
+    # The 0.22" will be approximated through padding and font size
     
     # Colors from the footer image
     grey_fill = 'ABABAB'      # Grey for left column
@@ -139,15 +139,15 @@ def add_footer(section, text_left, text_center, text_right):
         tc = cell._tc
         tcPr = tc.get_or_add_tcPr()
         tcMar = OxmlElement('w:tcMar')
-        # Minimal margins for tight fit at 0.22" height
+        # Minimal margins for tight fit
         for margin_name in ['top', 'bottom']:
             margin = OxmlElement(f'w:{margin_name}')
-            margin.set(qn('w:w'), '20')  # Minimal vertical padding
+            margin.set(qn('w:w'), '30')
             margin.set(qn('w:type'), 'dxa')
             tcMar.append(margin)
         for margin_name in ['left', 'right']:
             margin = OxmlElement(f'w:{margin_name}')
-            margin.set(qn('w:w'), '40')  # Small horizontal padding
+            margin.set(qn('w:w'), '50')
             margin.set(qn('w:type'), 'dxa')
             tcMar.append(margin)
         tcPr.append(tcMar)
