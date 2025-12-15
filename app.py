@@ -172,13 +172,14 @@ def add_footer(section, text_left, text_center, text_right):
     footer.is_linked_to_previous = False
     
     # Create table with 5 columns (3 content + 2 white gaps)
-    # White gaps will be very small - approximately 0.05" each
-    table = footer.add_table(rows=1, cols=5)
+    gap_width = Inches(0.05)
+    total_width = Inches(1.1) + gap_width + Inches(4.23) + gap_width + Inches(0.96)
+    
+    table = footer.add_table(rows=1, cols=5, width=total_width)
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     table.autofit = False
     
-    # Set exact column widths: content + tiny white gaps between
-    gap_width = Inches(0.05)  # Small white space between colored sections
+    # Set exact column widths
     table.columns[0].width = Inches(1.1)      # Grey section
     table.columns[1].width = gap_width        # White gap
     table.columns[2].width = Inches(4.23)     # Red/mauve section (address)
@@ -190,7 +191,6 @@ def add_footer(section, text_left, text_center, text_right):
     # Set row height to exactly 0.22"
     row = table.rows[0]
     row.height = Inches(0.22)
-    row.height_rule = 1  # Exact height (not "at least")
     
     # Colors
     grey_fill = 'ABABAB'
@@ -201,7 +201,6 @@ def add_footer(section, text_left, text_center, text_right):
         tcPr = tc.get_or_add_tcPr()
         tcMar = OxmlElement('w:tcMar')
         if tight:
-            # Very tight margins for 0.22" height
             for margin_name in ['top', 'bottom']:
                 margin = OxmlElement(f'w:{margin_name}')
                 margin.set(qn('w:w'), '20')
@@ -213,7 +212,6 @@ def add_footer(section, text_left, text_center, text_right):
                 margin.set(qn('w:type'), 'dxa')
                 tcMar.append(margin)
         else:
-            # No margins for white gap cells
             for margin_name in ['top', 'bottom', 'left', 'right']:
                 margin = OxmlElement(f'w:{margin_name}')
                 margin.set(qn('w:w'), '0')
@@ -225,19 +223,16 @@ def add_footer(section, text_left, text_center, text_right):
         """Set cell background color and text"""
         cell.text = text
         
-        # Set background color
         cell_shading = OxmlElement('w:shd')
         cell_shading.set(qn('w:fill'), fill_color)
         cell._tc.get_or_add_tcPr().append(cell_shading)
         
-        # Set vertical alignment to center
         tc = cell._tc
         tcPr = tc.get_or_add_tcPr()
         vAlign = OxmlElement('w:vAlign')
         vAlign.set(qn('w:val'), 'center')
         tcPr.append(vAlign)
         
-        # Format text
         for paragraph in cell.paragraphs:
             paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
             paragraph.paragraph_format.space_before = Pt(0)
@@ -249,29 +244,27 @@ def add_footer(section, text_left, text_center, text_right):
                 run.font.name = 'Arial'
                 run.font.bold = False
     
-    # Column 0: Grey section (kimley-horn.com)
+    # Column 0: Grey section
     set_cell_margins(cells[0], tight=True)
     set_cell_color_and_text(cells[0], text_left, grey_fill)
     
-    # Column 1: White gap (no background, no text)
+    # Column 1: White gap
     set_cell_margins(cells[1], tight=False)
     cells[1].text = ""
-    # No shading = white
     
-    # Column 2: Red/mauve section (address)
+    # Column 2: Red/mauve section
     set_cell_margins(cells[2], tight=True)
     set_cell_color_and_text(cells[2], text_center, red_fill)
     
-    # Column 3: White gap (no background, no text)
+    # Column 3: White gap
     set_cell_margins(cells[3], tight=False)
     cells[3].text = ""
-    # No shading = white
     
-    # Column 4: Red/mauve section (phone)
+    # Column 4: Red/mauve section
     set_cell_margins(cells[4], tight=True)
     set_cell_color_and_text(cells[4], text_right, red_fill)
     
-    # Remove all table borders to make gaps invisible
+    # Remove all table borders
     tbl = table._tbl
     tblPr = tbl.tblPr if tbl.tblPr is not None else OxmlElement('w:tblPr')
     tblBorders = OxmlElement('w:tblBorders')
