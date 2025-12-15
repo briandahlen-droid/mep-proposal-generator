@@ -112,83 +112,75 @@ def format_currency(value):
 
 
 def add_footer(section, text_left, text_center, text_right):
-    """Add a colored footer with three sections to match Kimley-Horn template exactly"""
+    """Add a colored footer with three sections - exact specs: 1.1", 4.23", 0.96", height 0.22" """
     footer = section.footer
     footer.is_linked_to_previous = False
     
-    table = footer.add_table(rows=1, cols=3, width=Inches(7.0))
+    # Create table with exact column widths from specifications
+    table = footer.add_table(rows=1, cols=3, width=Inches(6.29))  # Total: 1.1 + 4.23 + 0.96
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     table.autofit = False
     
-    # Adjust column widths to match image proportions
-    table.columns[0].width = Inches(1.3)    # kimley-horn.com
-    table.columns[1].width = Inches(4.5)    # address
-    table.columns[2].width = Inches(1.2)    # phone number
+    # Set exact column widths per specifications
+    table.columns[0].width = Inches(1.1)     # kimley-horn.com
+    table.columns[1].width = Inches(4.23)    # address (center)
+    table.columns[2].width = Inches(0.96)    # phone number
     
     cells = table.rows[0].cells
     
+    # Set exact row height to 0.22"
+    table.rows[0].height = Inches(0.22)
+    
     # Colors from the footer image
-    grey_fill = 'ABABAB'      # Lighter grey to match image
-    red_fill = 'BF8F96'       # Pinkish/mauve color from image
+    grey_fill = 'ABABAB'      # Grey for left column
+    red_fill = 'BF8F96'       # Mauve/pink for center and right columns
     
     def set_cell_margins(cell):
         tc = cell._tc
         tcPr = tc.get_or_add_tcPr()
         tcMar = OxmlElement('w:tcMar')
-        for margin_name in ['top', 'bottom', 'left', 'right']:
+        # Minimal margins for tight fit at 0.22" height
+        for margin_name in ['top', 'bottom']:
             margin = OxmlElement(f'w:{margin_name}')
-            margin.set(qn('w:w'), '60')  # More padding to match image
+            margin.set(qn('w:w'), '20')  # Minimal vertical padding
+            margin.set(qn('w:type'), 'dxa')
+            tcMar.append(margin)
+        for margin_name in ['left', 'right']:
+            margin = OxmlElement(f'w:{margin_name}')
+            margin.set(qn('w:w'), '40')  # Small horizontal padding
             margin.set(qn('w:type'), 'dxa')
             tcMar.append(margin)
         tcPr.append(tcMar)
     
-    # Left cell - grey background with kimley-horn.com
-    cells[0].text = text_left
-    cell_shading = OxmlElement('w:shd')
-    cell_shading.set(qn('w:fill'), grey_fill)
-    cells[0]._tc.get_or_add_tcPr().append(cell_shading)
-    set_cell_margins(cells[0])
-    for paragraph in cells[0].paragraphs:
-        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        paragraph.paragraph_format.space_before = Pt(0)
-        paragraph.paragraph_format.space_after = Pt(0)
-        for run in paragraph.runs:
-            run.font.size = Pt(8)  # Smaller font to match image
-            run.font.color.rgb = RGBColor(255, 255, 255)
-            run.font.name = 'Arial'
-            run.font.bold = False
-    
-    # Center cell - red/pink background with address
-    cells[1].text = text_center
-    cell_shading = OxmlElement('w:shd')
-    cell_shading.set(qn('w:fill'), red_fill)
-    cells[1]._tc.get_or_add_tcPr().append(cell_shading)
-    set_cell_margins(cells[1])
-    for paragraph in cells[1].paragraphs:
-        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        paragraph.paragraph_format.space_before = Pt(0)
-        paragraph.paragraph_format.space_after = Pt(0)
-        for run in paragraph.runs:
-            run.font.size = Pt(8)  # Smaller font to match image
-            run.font.color.rgb = RGBColor(255, 255, 255)
-            run.font.name = 'Arial'
-            run.font.bold = False
-    
-    # Right cell - red/pink background with phone
-    cells[2].text = text_right
-    cell_shading = OxmlElement('w:shd')
-    cell_shading.set(qn('w:fill'), red_fill)
-    cells[2]._tc.get_or_add_tcPr().append(cell_shading)
-    set_cell_margins(cells[2])
-    for paragraph in cells[2].paragraphs:
-        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        paragraph.paragraph_format.space_before = Pt(0)
-        paragraph.paragraph_format.space_after = Pt(0)
-        for run in paragraph.runs:
-            run.font.size = Pt(8)  # Smaller font to match image
-            run.font.color.rgb = RGBColor(255, 255, 255)
-            run.font.name = 'Arial'
-            run.font.bold = False
+    # Configure each cell
+    for i, (cell, text, fill) in enumerate([
+        (cells[0], text_left, grey_fill),
+        (cells[1], text_center, red_fill),
+        (cells[2], text_right, red_fill)
+    ]):
+        cell.text = text
+        cell_shading = OxmlElement('w:shd')
+        cell_shading.set(qn('w:fill'), fill)
+        cell._tc.get_or_add_tcPr().append(cell_shading)
+        set_cell_margins(cell)
+        
+        # Set vertical alignment to center
+        tc = cell._tc
+        tcPr = tc.get_or_add_tcPr()
+        vAlign = OxmlElement('w:vAlign')
+        vAlign.set(qn('w:val'), 'center')
+        tcPr.append(vAlign)
+        
+        for paragraph in cell.paragraphs:
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            paragraph.paragraph_format.space_before = Pt(0)
+            paragraph.paragraph_format.space_after = Pt(0)
+            paragraph.paragraph_format.line_spacing = 1.0
+            for run in paragraph.runs:
+                run.font.size = Pt(8)
+                run.font.color.rgb = RGBColor(255, 255, 255)
+                run.font.name = 'Arial'
+                run.font.bold = False
     
     # Remove table borders
     tbl = table._tbl
@@ -211,25 +203,25 @@ def add_header_with_logo(section, page_num=None):
     p = header.paragraphs[0] if header.paragraphs else header.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.LEFT
     
-    # "Kimley" in gray - lighter shade to match image
+    # "Kimley" in dark gray/black
     run1 = p.add_run("Kimley")
-    run1.font.size = Pt(24)
+    run1.font.size = Pt(22)
     run1.font.bold = False
-    run1.font.color.rgb = RGBColor(169, 169, 169)  # Lighter gray from image
+    run1.font.color.rgb = RGBColor(64, 64, 64)  # Dark gray from image
     run1.font.name = 'Arial'
     
-    # "»" symbol in red/pink
+    # "»" symbol in dark red
     run2 = p.add_run("»")
-    run2.font.size = Pt(24)
+    run2.font.size = Pt(22)
     run2.font.bold = False
-    run2.font.color.rgb = RGBColor(191, 143, 150)  # Pinkish color from image
+    run2.font.color.rgb = RGBColor(139, 0, 0)  # Dark red from image
     run2.font.name = 'Arial'
     
-    # "Horn" in red/pink
+    # "Horn" in dark red
     run3 = p.add_run("Horn")
-    run3.font.size = Pt(24)
+    run3.font.size = Pt(22)
     run3.font.bold = False
-    run3.font.color.rgb = RGBColor(191, 143, 150)  # Pinkish color from image
+    run3.font.color.rgb = RGBColor(139, 0, 0)  # Dark red from image
     run3.font.name = 'Arial'
     
     if page_num:
