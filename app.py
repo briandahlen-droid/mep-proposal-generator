@@ -112,7 +112,7 @@ def format_currency(value):
 
 
 def add_footer(section, text_left, text_center, text_right):
-    """Add a colored footer with three sections to match Kimley-Horn template"""
+    """Add a colored footer with three sections to match Kimley-Horn template exactly"""
     footer = section.footer
     footer.is_linked_to_previous = False
     
@@ -120,47 +120,77 @@ def add_footer(section, text_left, text_center, text_right):
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     table.autofit = False
     
-    table.columns[0].width = Inches(1.0)
-    table.columns[1].width = Inches(5.15)
-    table.columns[2].width = Inches(0.85)
+    # Adjust column widths to match image proportions
+    table.columns[0].width = Inches(1.3)    # kimley-horn.com
+    table.columns[1].width = Inches(4.5)    # address
+    table.columns[2].width = Inches(1.2)    # phone number
     
     cells = table.rows[0].cells
-    grey_fill = '404041'
-    red_fill = 'A20C33'
+    
+    # Colors from the footer image
+    grey_fill = 'ABABAB'      # Lighter grey to match image
+    red_fill = 'BF8F96'       # Pinkish/mauve color from image
     
     def set_cell_margins(cell):
         tc = cell._tc
         tcPr = tc.get_or_add_tcPr()
         tcMar = OxmlElement('w:tcMar')
-        for margin_name in ['top', 'bottom']:
+        for margin_name in ['top', 'bottom', 'left', 'right']:
             margin = OxmlElement(f'w:{margin_name}')
-            margin.set(qn('w:w'), '20')
-            margin.set(qn('w:type'), 'dxa')
-            tcMar.append(margin)
-        for margin_name in ['left', 'right']:
-            margin = OxmlElement(f'w:{margin_name}')
-            margin.set(qn('w:w'), '40')
+            margin.set(qn('w:w'), '60')  # More padding to match image
             margin.set(qn('w:type'), 'dxa')
             tcMar.append(margin)
         tcPr.append(tcMar)
     
-    for i, (cell, text, fill) in enumerate([(cells[0], text_left, grey_fill),
-                                              (cells[1], text_center, red_fill),
-                                              (cells[2], text_right, red_fill)]):
-        cell.text = text
-        cell_shading = OxmlElement('w:shd')
-        cell_shading.set(qn('w:fill'), fill)
-        cell._tc.get_or_add_tcPr().append(cell_shading)
-        set_cell_margins(cell)
-        for paragraph in cell.paragraphs:
-            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            paragraph.paragraph_format.space_before = Pt(0)
-            paragraph.paragraph_format.space_after = Pt(0)
-            for run in paragraph.runs:
-                run.font.size = Pt(9)
-                run.font.color.rgb = RGBColor(255, 255, 255)
-                run.font.name = 'Arial'
+    # Left cell - grey background with kimley-horn.com
+    cells[0].text = text_left
+    cell_shading = OxmlElement('w:shd')
+    cell_shading.set(qn('w:fill'), grey_fill)
+    cells[0]._tc.get_or_add_tcPr().append(cell_shading)
+    set_cell_margins(cells[0])
+    for paragraph in cells[0].paragraphs:
+        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        paragraph.paragraph_format.space_before = Pt(0)
+        paragraph.paragraph_format.space_after = Pt(0)
+        for run in paragraph.runs:
+            run.font.size = Pt(8)  # Smaller font to match image
+            run.font.color.rgb = RGBColor(255, 255, 255)
+            run.font.name = 'Arial'
+            run.font.bold = False
     
+    # Center cell - red/pink background with address
+    cells[1].text = text_center
+    cell_shading = OxmlElement('w:shd')
+    cell_shading.set(qn('w:fill'), red_fill)
+    cells[1]._tc.get_or_add_tcPr().append(cell_shading)
+    set_cell_margins(cells[1])
+    for paragraph in cells[1].paragraphs:
+        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        paragraph.paragraph_format.space_before = Pt(0)
+        paragraph.paragraph_format.space_after = Pt(0)
+        for run in paragraph.runs:
+            run.font.size = Pt(8)  # Smaller font to match image
+            run.font.color.rgb = RGBColor(255, 255, 255)
+            run.font.name = 'Arial'
+            run.font.bold = False
+    
+    # Right cell - red/pink background with phone
+    cells[2].text = text_right
+    cell_shading = OxmlElement('w:shd')
+    cell_shading.set(qn('w:fill'), red_fill)
+    cells[2]._tc.get_or_add_tcPr().append(cell_shading)
+    set_cell_margins(cells[2])
+    for paragraph in cells[2].paragraphs:
+        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        paragraph.paragraph_format.space_before = Pt(0)
+        paragraph.paragraph_format.space_after = Pt(0)
+        for run in paragraph.runs:
+            run.font.size = Pt(8)  # Smaller font to match image
+            run.font.color.rgb = RGBColor(255, 255, 255)
+            run.font.name = 'Arial'
+            run.font.bold = False
+    
+    # Remove table borders
     tbl = table._tbl
     tblPr = tbl.tblPr if tbl.tblPr is not None else OxmlElement('w:tblPr')
     tblBorders = OxmlElement('w:tblBorders')
@@ -174,30 +204,33 @@ def add_footer(section, text_left, text_center, text_right):
 
 
 def add_header_with_logo(section, page_num=None):
-    """Add header with Kimley-Horn logo styling"""
+    """Add header with Kimley-Horn logo styling - matches exact branding"""
     header = section.header
     header.is_linked_to_previous = False
     
     p = header.paragraphs[0] if header.paragraphs else header.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.LEFT
     
+    # "Kimley" in gray - lighter shade to match image
     run1 = p.add_run("Kimley")
-    run1.font.size = Pt(28)
-    run1.font.bold = True
-    run1.font.color.rgb = RGBColor(102, 102, 102)
-    run1.font.name = 'Calibri'
+    run1.font.size = Pt(24)
+    run1.font.bold = False
+    run1.font.color.rgb = RGBColor(169, 169, 169)  # Lighter gray from image
+    run1.font.name = 'Arial'
     
+    # "»" symbol in red/pink
     run2 = p.add_run("»")
-    run2.font.size = Pt(28)
-    run2.font.bold = True
-    run2.font.color.rgb = RGBColor(200, 16, 46)
-    run2.font.name = 'Calibri'
+    run2.font.size = Pt(24)
+    run2.font.bold = False
+    run2.font.color.rgb = RGBColor(191, 143, 150)  # Pinkish color from image
+    run2.font.name = 'Arial'
     
+    # "Horn" in red/pink
     run3 = p.add_run("Horn")
-    run3.font.size = Pt(28)
-    run3.font.bold = True
-    run3.font.color.rgb = RGBColor(200, 16, 46)
-    run3.font.name = 'Calibri'
+    run3.font.size = Pt(24)
+    run3.font.bold = False
+    run3.font.color.rgb = RGBColor(191, 143, 150)  # Pinkish color from image
+    run3.font.name = 'Arial'
     
     if page_num:
         tab_stops = p.paragraph_format.tab_stops
@@ -206,7 +239,7 @@ def add_header_with_logo(section, page_num=None):
         run_page = p.add_run(f"Page {page_num}")
         run_page.font.size = Pt(11)
         run_page.font.italic = True
-        run_page.font.name = 'Calibri'
+        run_page.font.name = 'Arial'
 
 
 def add_section_header(doc, text):
@@ -268,8 +301,9 @@ def create_proposal_document(data):
     """Generate the complete proposal document"""
     doc = Document()
     
+    # Set default font to Arial (body text)
     style = doc.styles['Normal']
-    style.font.name = 'Calibri'
+    style.font.name = 'Arial'
     style.font.size = Pt(11)
     
     for section in doc.sections:
@@ -280,7 +314,7 @@ def create_proposal_document(data):
     
     section = doc.sections[0]
     add_header_with_logo(section)
-    add_footer(section, "kimley-horn.com", "200 Central Avenue, Suite 600, St. Petersburg, FL 33701", "727 547 3999")
+    add_footer(section, "kimley-horn.com", "200 Central Avenue Suite 600 St. Petersburg, FL 33701", "727-547-3999")
     
     # Date
     p = doc.add_paragraph()
