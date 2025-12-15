@@ -1,7 +1,8 @@
 """
-MEP Proposal Generator - Streamlit App
+MEP Proposal Generator - Streamlit App (Complete & Improved)
 Kimley-Horn Engineering Services
 Generates professional .docx proposals with proper headers and footers
+Version 2.1
 """
 
 import streamlit as st
@@ -14,6 +15,7 @@ from docx.oxml.ns import qn, nsmap
 from docx.oxml import OxmlElement
 from datetime import datetime
 from io import BytesIO
+import re
 
 # Page config
 st.set_page_config(
@@ -30,6 +32,7 @@ st.markdown("""
         padding: 20px;
         border-radius: 10px;
         margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     .main-header h1 {
         color: white;
@@ -44,6 +47,27 @@ st.markdown("""
         border-radius: 8px;
         margin-bottom: 10px;
     }
+    .info-box {
+        background-color: #f0f2f6;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #C8102E;
+        margin: 10px 0;
+    }
+    .success-box {
+        background-color: #d4edda;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #28a745;
+        margin: 10px 0;
+    }
+    .warning-box {
+        background-color: #fff3cd;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #ffc107;
+        margin: 10px 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -56,29 +80,54 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+# ============== HELPER FUNCTIONS ==============
+
+def validate_currency(value):
+    """Validate and format currency input"""
+    if not value:
+        return True, ""
+    cleaned = str(value).replace('$', '').replace(',', '').strip()
+    try:
+        float(cleaned)
+        return True, cleaned
+    except ValueError:
+        return False, None
+
+
+def validate_email(email):
+    """Validate email format"""
+    if not email:
+        return True
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(pattern, email) is not None
+
+
+def format_currency(value):
+    """Format number as currency"""
+    try:
+        num = float(str(value).replace(',', '').replace('$', ''))
+        return f"{num:,.0f}"
+    except:
+        return value
+
+
 def add_footer(section, text_left, text_center, text_right):
     """Add a colored footer with three sections to match Kimley-Horn template"""
     footer = section.footer
     footer.is_linked_to_previous = False
     
-    # Create table for footer - make wider to fit address on one line
     table = footer.add_table(rows=1, cols=3, width=Inches(7.0))
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     table.autofit = False
     
-    # Set column widths - center must be wide enough for full address
-    table.columns[0].width = Inches(1.0)    # kimley-horn.com
-    table.columns[1].width = Inches(5.15)   # full address - ONE LINE
-    table.columns[2].width = Inches(0.85)   # phone number
+    table.columns[0].width = Inches(1.0)
+    table.columns[1].width = Inches(5.15)
+    table.columns[2].width = Inches(0.85)
     
-    # Style cells
     cells = table.rows[0].cells
+    grey_fill = '404041'
+    red_fill = 'A20C33'
     
-    # Kimley-Horn brand colors
-    grey_fill = '404041'      # Grey-90 for left cell
-    red_fill = 'A20C33'       # PMS 201C for middle and right cells
-    
-    # Helper to set minimal cell margins
     def set_cell_margins(cell):
         tc = cell._tc
         tcPr = tc.get_or_add_tcPr()
@@ -95,52 +144,23 @@ def add_footer(section, text_left, text_center, text_right):
             tcMar.append(margin)
         tcPr.append(tcMar)
     
-    # Left cell - grey background
-    cells[0].text = text_left
-    cell_shading = OxmlElement('w:shd')
-    cell_shading.set(qn('w:fill'), grey_fill)
-    cells[0]._tc.get_or_add_tcPr().append(cell_shading)
-    set_cell_margins(cells[0])
-    for paragraph in cells[0].paragraphs:
-        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        paragraph.paragraph_format.space_before = Pt(0)
-        paragraph.paragraph_format.space_after = Pt(0)
-        for run in paragraph.runs:
-            run.font.size = Pt(9)
-            run.font.color.rgb = RGBColor(255, 255, 255)
-            run.font.name = 'Arial'
+    for i, (cell, text, fill) in enumerate([(cells[0], text_left, grey_fill),
+                                              (cells[1], text_center, red_fill),
+                                              (cells[2], text_right, red_fill)]):
+        cell.text = text
+        cell_shading = OxmlElement('w:shd')
+        cell_shading.set(qn('w:fill'), fill)
+        cell._tc.get_or_add_tcPr().append(cell_shading)
+        set_cell_margins(cell)
+        for paragraph in cell.paragraphs:
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            paragraph.paragraph_format.space_before = Pt(0)
+            paragraph.paragraph_format.space_after = Pt(0)
+            for run in paragraph.runs:
+                run.font.size = Pt(9)
+                run.font.color.rgb = RGBColor(255, 255, 255)
+                run.font.name = 'Arial'
     
-    # Center cell - red background
-    cells[1].text = text_center
-    cell_shading = OxmlElement('w:shd')
-    cell_shading.set(qn('w:fill'), red_fill)
-    cells[1]._tc.get_or_add_tcPr().append(cell_shading)
-    set_cell_margins(cells[1])
-    for paragraph in cells[1].paragraphs:
-        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        paragraph.paragraph_format.space_before = Pt(0)
-        paragraph.paragraph_format.space_after = Pt(0)
-        for run in paragraph.runs:
-            run.font.size = Pt(9)
-            run.font.color.rgb = RGBColor(255, 255, 255)
-            run.font.name = 'Arial'
-    
-    # Right cell - red background
-    cells[2].text = text_right
-    cell_shading = OxmlElement('w:shd')
-    cell_shading.set(qn('w:fill'), red_fill)
-    cells[2]._tc.get_or_add_tcPr().append(cell_shading)
-    set_cell_margins(cells[2])
-    for paragraph in cells[2].paragraphs:
-        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        paragraph.paragraph_format.space_before = Pt(0)
-        paragraph.paragraph_format.space_after = Pt(0)
-        for run in paragraph.runs:
-            run.font.size = Pt(9)
-            run.font.color.rgb = RGBColor(255, 255, 255)
-            run.font.name = 'Arial'
-    
-    # Remove all table borders
     tbl = table._tbl
     tblPr = tbl.tblPr if tbl.tblPr is not None else OxmlElement('w:tblPr')
     tblBorders = OxmlElement('w:tblBorders')
@@ -154,76 +174,120 @@ def add_footer(section, text_left, text_center, text_right):
 
 
 def add_header_with_logo(section, page_num=None):
-    """Add header with Kimley-Horn logo styling and optional page number"""
+    """Add header with Kimley-Horn logo styling"""
     header = section.header
     header.is_linked_to_previous = False
     
-    # Add letterhead paragraph
     p = header.paragraphs[0] if header.paragraphs else header.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.LEFT
     
-    # "Kimley" in gray
     run1 = p.add_run("Kimley")
     run1.font.size = Pt(28)
     run1.font.bold = True
     run1.font.color.rgb = RGBColor(102, 102, 102)
     run1.font.name = 'Calibri'
     
-    # ">>" symbol in red
     run2 = p.add_run("»")
     run2.font.size = Pt(28)
     run2.font.bold = True
     run2.font.color.rgb = RGBColor(200, 16, 46)
     run2.font.name = 'Calibri'
     
-    # "Horn" in red
     run3 = p.add_run("Horn")
     run3.font.size = Pt(28)
     run3.font.bold = True
     run3.font.color.rgb = RGBColor(200, 16, 46)
     run3.font.name = 'Calibri'
     
-    # Add page number on right if specified
     if page_num:
-        # Add tab stop for right alignment
         tab_stops = p.paragraph_format.tab_stops
         tab_stops.add_tab_stop(Inches(6.5), WD_TAB_ALIGNMENT.RIGHT)
-        run_tab = p.add_run("\t")
+        p.add_run("\t")
         run_page = p.add_run(f"Page {page_num}")
         run_page.font.size = Pt(11)
         run_page.font.italic = True
         run_page.font.name = 'Calibri'
 
 
+def add_section_header(doc, text):
+    """Add an underlined section header"""
+    p = doc.add_paragraph()
+    p.paragraph_format.space_before = Pt(20)
+    p.paragraph_format.space_after = Pt(10)
+    run = p.add_run(text)
+    run.bold = True
+    run.underline = True
+
+
+def add_bullet(doc, text):
+    """Add a bullet point"""
+    p = doc.add_paragraph(style='List Bullet')
+    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    p.add_run(text)
+
+
+def add_sub_bullet(doc, text):
+    """Add a sub-bullet point"""
+    p = doc.add_paragraph()
+    p.paragraph_format.left_indent = Inches(0.5)
+    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    p.add_run("○  " + text)
+
+
+def add_sub_sub_bullet(doc, text):
+    """Add a sub-sub-bullet point"""
+    p = doc.add_paragraph()
+    p.paragraph_format.left_indent = Inches(1.0)
+    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    p.add_run("▪  " + text)
+
+
+def calculate_total(data):
+    """Calculate total fee"""
+    fees = [
+        data.get('fee_sd', '0'),
+        data.get('fee_dd', '0'),
+        data.get('fee_cd', '0'),
+        data.get('fee_bidding', '0'),
+        data.get('fee_construction', '0'),
+    ]
+    if data.get('include_record_drawings'):
+        fees.append(data.get('fee_record_drawings', '0'))
+    
+    total = 0
+    for fee in fees:
+        try:
+            total += float(str(fee).replace(',', '').replace('$', '') or 0)
+        except:
+            pass
+    
+    return f"{total:,.0f}" if total > 0 else "___________"
+
+
 def create_proposal_document(data):
     """Generate the complete proposal document"""
     doc = Document()
     
-    # Set default font
     style = doc.styles['Normal']
     style.font.name = 'Calibri'
     style.font.size = Pt(11)
     
-    # Set margins
     for section in doc.sections:
         section.top_margin = Inches(1)
         section.bottom_margin = Inches(0.75)
         section.left_margin = Inches(1)
         section.right_margin = Inches(1)
     
-    # Add header and footer to first section
     section = doc.sections[0]
     add_header_with_logo(section)
     add_footer(section, "kimley-horn.com", "200 Central Avenue, Suite 600, St. Petersburg, FL 33701", "727 547 3999")
-    
-    # === PAGE 1 CONTENT ===
     
     # Date
     p = doc.add_paragraph()
     p.add_run(data['date'])
     p.paragraph_format.space_after = Pt(0)
     
-    # Recipient - all on connected lines with no extra spacing
+    # Recipient
     p = doc.add_paragraph()
     p.paragraph_format.space_after = Pt(0)
     p.add_run(f"{data['client_title']} {data['client_contact']}")
@@ -242,11 +306,10 @@ def create_proposal_document(data):
         p.paragraph_format.space_after = Pt(0)
         p.add_run(data['address2'])
     
-    # Add space before Re: line
     p = doc.add_paragraph()
     p.paragraph_format.space_after = Pt(0)
     
-    # Re: line - formatted properly
+    # Re: line
     p = doc.add_paragraph()
     p.paragraph_format.space_after = Pt(0)
     p.add_run("Re:\tLetter Agreement for Professional Services for")
@@ -261,7 +324,6 @@ def create_proposal_document(data):
     p.paragraph_format.left_indent = Inches(0.5)
     p.add_run(f"{data['project_address']}, {data['project_city']}, {data['project_state']}")
     
-    # Add space before salutation
     p = doc.add_paragraph()
     p.paragraph_format.space_after = Pt(0)
     
@@ -276,14 +338,13 @@ def create_proposal_document(data):
     p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     p.add_run(f"Kimley-Horn and Associates, Inc. (\"Kimley-Horn\" or \"Consultant\") is pleased to submit this Letter Agreement (the \"Agreement\") to {data['company_name'] or '___________'} (\"Client\") for providing mechanical, electrical, plumbing, and fire protection consulting engineering services for the proposed {data['project_name'] or 'XX'} development located on {data['project_address'] or 'XXX Avenue'} in {data['project_city'] or 'XXX'}, {data['project_state'] or 'XX'} (\"Project\").")
     
-    # === PROJECT UNDERSTANDING AND ASSUMPTIONS ===
+    # === PROJECT UNDERSTANDING ===
     add_section_header(doc, "Project Understanding and Assumptions")
     
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     p.add_run("Kimley-Horn's scope and fee are based on the following project understanding and assumptions. If any of these assumptions are not correct, then the scope and fee provided below may change:")
     
-    # Add assumptions as bullet points
     if data.get('is_new_building'):
         add_bullet(doc, f"{data['company_name'] or 'Client'} will be building a new building located at {data['project_address'] or 'XXX'}, {data['project_state'] or 'XX'}.")
     
@@ -459,7 +520,7 @@ def create_proposal_document(data):
     p = doc.add_paragraph()
     p.add_run("The Fire protection design shall be based on the following:")
     
-    add_sub_bullet(doc, "Fire protection design to consist of schematic plans and \"performance-based\" (FAC 61G15) specifications. Detailed fire sprinkler drawings shall be provided by the Client's sprinkler contractor.")
+    add_sub_bullet(doc, "Fire protection design to consist of schematic plans and \"performance-based\" (FAC 61G15) specifications. Detailed fire sprinkler drawings shall be provided by the Client's fire sprinkler contractor.")
     add_sub_bullet(doc, "The Client's fire sprinkler contractor shall be responsible for fire sprinkler permit documents.")
     
     if data.get('fire_pump') == 'Included':
@@ -658,7 +719,8 @@ def create_proposal_document(data):
     p.add_run("Kimley-Horn will perform the services in Tasks 110 – 150 for the total lump sum labor fee below. Individual task amounts are informational only. In addition to the lump sum labor fee, direct reimbursable expenses such as express delivery services, fees, air travel, and other direct expenses will be billed at 1.15 times cost. All permitting, application, and similar project fees will be paid directly by the Client.")
     
     # Create fee table
-    fee_table = doc.add_table(rows=7, cols=3)
+    num_rows = 7 if not data.get('include_record_drawings') else 8
+    fee_table = doc.add_table(rows=num_rows, cols=3)
     fee_table.style = 'Table Grid'
     fee_table.alignment = WD_TABLE_ALIGNMENT.CENTER
     
@@ -688,6 +750,9 @@ def create_proposal_document(data):
         ("150 Limited Construction Phase Services", data.get('fee_construction', 'XXX'), "Lump Sum"),
     ]
     
+    if data.get('include_record_drawings'):
+        fee_data.append(("160 Record Drawings", data.get('fee_record_drawings', 'XXX'), "Lump Sum"))
+    
     for i, (task, fee, fee_type) in enumerate(fee_data):
         row = fee_table.rows[i + 1]
         row.cells[0].text = task
@@ -696,7 +761,8 @@ def create_proposal_document(data):
     
     # Total row
     total = calculate_total(data)
-    total_row = fee_table.rows[6]
+    total_row_idx = num_rows - 1
+    total_row = fee_table.rows[total_row_idx]
     total_row.cells[0].text = "Total"
     total_row.cells[1].text = f"${total}"
     total_row.cells[2].text = ""
@@ -727,7 +793,7 @@ def create_proposal_document(data):
     p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     run = p.add_run("In addition to the matters set forth herein, our Agreement shall include and be subject to, and only to, the attached Standard Provisions, which are incorporated by reference. As used in the Standard Provisions, \"Kimley-Horn\" shall refer to Kimley-Horn and Associates, Inc., and \"Client\" shall refer to ")
     run2 = p.add_run(data['company_name'] or "___Insert Client's Legal Entity Name___")
-    run2.font.highlight_color = 7  # Yellow highlight
+    run2.font.highlight_color = 7
     p.add_run(".")
     
     p = doc.add_paragraph()
@@ -812,68 +878,11 @@ def create_proposal_document(data):
     return doc
 
 
-def add_section_header(doc, text):
-    """Add an underlined section header"""
-    p = doc.add_paragraph()
-    p.paragraph_format.space_before = Pt(20)
-    p.paragraph_format.space_after = Pt(10)
-    run = p.add_run(text)
-    run.bold = True
-    run.underline = True
-
-
-def add_bullet(doc, text):
-    """Add a bullet point"""
-    p = doc.add_paragraph(style='List Bullet')
-    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    p.add_run(text)
-
-
-def add_sub_bullet(doc, text):
-    """Add a sub-bullet point (indented)"""
-    p = doc.add_paragraph()
-    p.paragraph_format.left_indent = Inches(0.5)
-    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    p.add_run("○  " + text)
-
-
-def add_sub_sub_bullet(doc, text):
-    """Add a sub-sub-bullet point (double indented)"""
-    p = doc.add_paragraph()
-    p.paragraph_format.left_indent = Inches(1.0)
-    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    p.add_run("▪  " + text)
-
-
-def calculate_total(data):
-    """Calculate total fee"""
-    fees = [
-        data.get('fee_sd', '0'),
-        data.get('fee_dd', '0'),
-        data.get('fee_cd', '0'),
-        data.get('fee_bidding', '0'),
-        data.get('fee_construction', '0'),
-    ]
-    if data.get('include_record_drawings'):
-        fees.append(data.get('fee_record_drawings', '0'))
-    
-    total = 0
-    for fee in fees:
-        try:
-            total += float(str(fee).replace(',', '').replace('$', '') or 0)
-        except:
-            pass
-    
-    return f"{total:,.0f}" if total > 0 else "___________"
-
-
 # ============== STREAMLIT FORM ==============
 
-# Initialize session state
 if 'form_data' not in st.session_state:
     st.session_state.form_data = {}
 
-# Create tabs for organization
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📋 Client & Project", 
     "🔧 Assumptions", 
@@ -885,27 +894,41 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 
 with tab1:
     st.subheader("Client Information")
+    with st.expander("ℹ️ Why we need this", expanded=False):
+        st.info("Client information appears in the proposal header and throughout the document.")
+    
     col1, col2 = st.columns(2)
     with col1:
-        client_title = st.selectbox("Client Title", ["Mr.", "Mrs.", "Ms.", "Dr."])
-        client_contact = st.text_input("Client Contact Name", placeholder="John Smith")
-        company_name = st.text_input("Company Name (Legal Entity)", placeholder="Company Name, LLC")
+        client_title = st.selectbox("Client Title", ["Mr.", "Mrs.", "Ms.", "Dr."],
+                                    help="Professional title of the client contact")
+        client_contact = st.text_input("Client Contact Name", 
+                                      placeholder="John Smith",
+                                      help="Full name of primary contact")
+        company_name = st.text_input("Company Name (Legal Entity)", 
+                                    placeholder="Company Name, LLC",
+                                    help="⚠️ Must match legal entity exactly")
     with col2:
         address1 = st.text_input("Address Line 1", placeholder="123 Main Street")
-        address2 = st.text_input("Address Line 2 (City, State ZIP)", placeholder="Tampa, FL 33601")
+        address2 = st.text_input("Address Line 2 (City, State ZIP)", 
+                                placeholder="Tampa, FL 33601")
         proposal_date = st.date_input("Proposal Date", datetime.now())
     
+    st.markdown("---")
     st.subheader("Project Information")
     col1, col2 = st.columns(2)
     with col1:
-        project_name = st.text_input("Project Name", placeholder="Downtown Office Complex")
-        project_address = st.text_input("Project Address", placeholder="456 Business Avenue")
+        project_name = st.text_input("Project Name", 
+                                    placeholder="Downtown Office Complex",
+                                    help="Official project name")
+        project_address = st.text_input("Project Address", 
+                                       placeholder="456 Business Avenue")
     with col2:
         project_city = st.text_input("City", placeholder="St. Petersburg")
-        project_state = st.text_input("State", value="FL")
+        project_state = st.text_input("State", value="FL", max_chars=2)
 
 with tab2:
     st.subheader("Project Understanding & Assumptions")
+    st.info("✅ Select all applicable items. These will appear in the 'Project Understanding' section.")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -917,15 +940,19 @@ with tab2:
         building_stories = st.text_input("Building Stories", placeholder="10")
         total_area = st.text_input("Total Area (SF)", placeholder="150,000")
         construction_phases = st.text_input("Construction Phases", placeholder="2")
-        construction_budget = st.text_input("Construction Budget ($)", placeholder="25,000,000")
+        construction_budget = st.text_input("Construction Budget ($)", 
+                                           placeholder="25,000,000")
     
     col1, col2 = st.columns(2)
     with col1:
-        leed_rating = st.selectbox("LEED Rating", ["Not Applicable", "LEED Certified", "LEED Silver", "LEED Gold", "LEED Platinum"])
+        leed_rating = st.selectbox("LEED Rating", 
+                                  ["Not Applicable", "LEED Certified", "LEED Silver", 
+                                   "LEED Gold", "LEED Platinum"])
         unit_types = st.text_input("Unit Types", placeholder="8")
     with col2:
         typical_floors = st.text_input("Typical Floors", placeholder="5")
     
+    st.markdown("---")
     st.subheader("Retail Core & Shell")
     retail_core_shell = st.checkbox("Include Retail Core & Shell Provisions")
     if retail_core_shell:
@@ -949,7 +976,8 @@ with tab3:
             "Rooftop Units without VAV",
             "VRF",
             "Split DX"
-        ])
+        ], help="Select the main heating/cooling system type")
+        
         hvac_residential_highrise = st.checkbox("Residential Highrise (system TBD)")
         hvac_existing_reuse = st.checkbox("Reuse Existing Mechanical System")
         outside_air_unit = st.checkbox("Dedicated Outside Air Unit", value=True)
@@ -964,6 +992,7 @@ with tab3:
         smoke_control = st.checkbox("Smoke Control System")
         elevator_hoistway = st.checkbox("Elevator Hoistway (no pressurization)")
         
+        st.markdown("---")
         st.subheader("🚿 Plumbing System")
         water_service = st.selectbox("Water Service", ["Single Meter", "Multiple Meters"])
         roof_drainage = st.selectbox("Roof Drainage", ["Internal Drains", "Gutters/Downspouts"])
@@ -1000,16 +1029,21 @@ with tab3:
         fire_alarm = st.checkbox("Fire Alarm Design", value=True)
         technology_design = st.checkbox("Technology Design (pathway only)", value=True)
         
+        st.markdown("---")
         st.subheader("🔥 Fire Protection")
         fire_pump = st.selectbox("Fire Pump", ["Excluded", "Included"])
         
-        st.subheader("📐 Revit Standards")
+        st.markdown("---")
+        st.subheader("🏗️ Revit Standards")
         weekly_meetings = st.checkbox("Weekly Meetings", value=True)
-        revit_lod = st.selectbox("Revit LOD", ["200", "300", "350", "400"], index=1)
-        revit_coordination_hours = st.text_input("Revit Coordination Hours", placeholder="Optional")
+        revit_lod = st.selectbox("Revit LOD", ["200", "300", "350", "400"], index=1,
+                                help="Level of Development for BIM model")
+        revit_coordination_hours = st.text_input("Revit Coordination Hours", 
+                                                placeholder="Optional")
 
 with tab4:
     st.subheader("Design Phase Schedule")
+    st.info("📅 Enter duration and meeting details for each design phase")
     
     col1, col2, col3 = st.columns(3)
     
@@ -1054,40 +1088,62 @@ with tab4:
 
 with tab5:
     st.subheader("Fee Structure")
+    st.info("💰 Enter fees as numbers only (commas and $ symbols will be added automatically)")
     
     col1, col2 = st.columns(2)
     with col1:
-        fee_sd = st.text_input("Task 110 - Schematic Design ($)", placeholder="25,000")
-        fee_dd = st.text_input("Task 120 - Design Development ($)", placeholder="45,000")
-        fee_cd = st.text_input("Task 130 - Construction Documents ($)", placeholder="85,000")
+        fee_sd = st.text_input("Task 110 - Schematic Design ($)", 
+                              placeholder="25000",
+                              help="Enter amount without commas")
+        fee_dd = st.text_input("Task 120 - Design Development ($)", 
+                              placeholder="45000")
+        fee_cd = st.text_input("Task 130 - Construction Documents ($)", 
+                              placeholder="85000")
     with col2:
-        fee_bidding = st.text_input("Task 140 - Bidding ($)", placeholder="5,000")
-        fee_construction = st.text_input("Task 150 - Construction Phase ($)", placeholder="25,000")
+        fee_bidding = st.text_input("Task 140 - Bidding ($)", 
+                                   placeholder="5000")
+        fee_construction = st.text_input("Task 150 - Construction Phase ($)", 
+                                        placeholder="25000")
         if include_record_drawings:
-            fee_record_drawings = st.text_input("Task 160 - Record Drawings ($)", placeholder="10,000")
+            fee_record_drawings = st.text_input("Task 160 - Record Drawings ($)", 
+                                               placeholder="10000")
         else:
             fee_record_drawings = ""
     
     # Calculate and display total
+    st.markdown("---")
     fees_list = [fee_sd, fee_dd, fee_cd, fee_bidding, fee_construction]
     if include_record_drawings:
         fees_list.append(fee_record_drawings)
     
     total = 0
+    valid_fees = True
     for fee in fees_list:
-        try:
-            total += float(str(fee).replace(',', '').replace('$', '') or 0)
-        except:
-            pass
+        is_valid, cleaned = validate_currency(fee)
+        if not is_valid and fee:
+            valid_fees = False
+            st.error(f"Invalid fee amount: {fee}")
+        elif cleaned:
+            total += float(cleaned)
     
-    st.markdown(f"### Total Fee: **${total:,.0f}**" if total > 0 else "### Total Fee: **$___________**")
+    if valid_fees:
+        st.success(f"### Total Fee: **${total:,.0f}**" if total > 0 else "### Total Fee: **$___________**")
     
     st.markdown("---")
     st.subheader("Closure Information")
     col1, col2 = st.columns(2)
     with col1:
-        invoice_email = st.text_input("Invoice Email", placeholder="accounting@company.com")
-        invoice_copy = st.text_input("CC Email", placeholder="manager@company.com")
+        invoice_email = st.text_input("Invoice Email", 
+                                     placeholder="accounting@company.com",
+                                     help="Primary email for invoices")
+        if invoice_email and not validate_email(invoice_email):
+            st.error("Please enter a valid email address")
+            
+        invoice_copy = st.text_input("CC Email", 
+                                    placeholder="manager@company.com",
+                                    help="Additional recipient for invoices")
+        if invoice_copy and not validate_email(invoice_copy):
+            st.error("Please enter a valid email address")
     with col2:
         project_manager = st.text_input("Project Manager", value="Clayton Scelzi")
         senior_vp = st.text_input("Senior Vice President", value="Scott W. Gilner, PE")
@@ -1095,113 +1151,163 @@ with tab5:
 with tab6:
     st.subheader("Generate Proposal Document")
     
-    st.info("📄 Review your inputs in the other tabs, then click below to generate your professional Word document with proper headers and footers on every page.")
+    st.markdown("""
+    <div class="info-box">
+        <h4>📄 Ready to Generate Your Proposal?</h4>
+        <p>Review your inputs in the other tabs, then click below to generate your professional Word document with proper headers and footers on every page.</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    if st.button("🚀 Generate MEP Proposal", type="primary", use_container_width=True):
-        # Collect all form data
-        form_data = {
-            'date': proposal_date.strftime("%B %d, %Y"),
-            'client_title': client_title,
-            'client_contact': client_contact,
-            'company_name': company_name,
-            'address1': address1,
-            'address2': address2,
-            'project_name': project_name,
-            'project_address': project_address,
-            'project_city': project_city,
-            'project_state': project_state,
-            'is_new_building': is_new_building,
-            'is_renovation': is_renovation,
-            'building_stories': building_stories,
-            'total_area': total_area,
-            'construction_phases': construction_phases,
-            'separate_buildings': separate_buildings,
-            'core_and_shell': core_and_shell,
-            'leed_rating': leed_rating,
-            'construction_budget': construction_budget,
-            'unit_types': unit_types,
-            'typical_floors': typical_floors,
-            'retail_core_shell': retail_core_shell,
-            'retail_electrical': retail_electrical if retail_core_shell else False,
-            'retail_plumbing': retail_plumbing if retail_core_shell else False,
-            'retail_food_beverage': retail_food_beverage if retail_core_shell else False,
-            'retail_mechanical': retail_mechanical if retail_core_shell else False,
-            'hvac_system': hvac_system,
-            'hvac_residential_highrise': hvac_residential_highrise,
-            'hvac_existing_reuse': hvac_existing_reuse,
-            'outside_air_unit': outside_air_unit,
-            'exhaust_system': exhaust_system,
-            'parking_garage': parking_garage,
-            'smoke_control': smoke_control,
-            'elevator_hoistway': elevator_hoistway,
-            'water_service': water_service,
-            'roof_drainage': roof_drainage,
-            'roof_storm_drain': roof_storm_drain,
-            'parking_garage_drain': parking_garage_drain,
-            'water_oil_separator': water_oil_separator,
-            'sump_pump': sump_pump,
-            'booster_pump': booster_pump,
-            'sanitary_vent': sanitary_vent,
-            'grease_waste': grease_waste,
-            'natural_gas': natural_gas,
-            'fuel_delivery': fuel_delivery,
-            'civil_coordination': civil_coordination,
-            'existing_electrical_renovation': existing_electrical_renovation,
-            'power_receptacles': power_receptacles,
-            'core_shell_electrical': core_shell_electrical,
-            'lighting_coordination': lighting_coordination,
-            'lightning_protection': lightning_protection,
-            'emergency_generator': emergency_generator,
-            'ev_charging': ev_charging,
-            'ev_ready_spaces': ev_ready_spaces if ev_charging == "Included" else "",
-            'ev_capable_spaces': ev_capable_spaces if ev_charging == "Included" else "",
-            'fire_alarm': fire_alarm,
-            'technology_design': technology_design,
-            'fire_pump': fire_pump,
-            'weekly_meetings': weekly_meetings,
-            'revit_lod': revit_lod,
-            'revit_coordination_hours': revit_coordination_hours,
-            'sd_existing_survey': sd_existing_survey,
-            'sd_site_visit_hours': sd_site_visit_hours if sd_existing_survey else "",
-            'sd_weeks': sd_weeks,
-            'sd_meeting_hours': sd_meeting_hours,
-            'sd_total_meetings': sd_total_meetings,
-            'dd_weeks': dd_weeks,
-            'dd_meeting_hours': dd_meeting_hours,
-            'dd_total_meetings': dd_total_meetings,
-            'dd_rounds': dd_rounds,
-            'cd_weeks': cd_weeks,
-            'cd_meeting_hours': cd_meeting_hours,
-            'cd_total_meetings': cd_total_meetings,
-            'cd_percentages': cd_percentages,
-            'site_visits': site_visits,
-            'include_record_drawings': include_record_drawings,
-            'record_drawings_hours': record_drawings_hours if include_record_drawings else "",
-            'fee_sd': fee_sd,
-            'fee_dd': fee_dd,
-            'fee_cd': fee_cd,
-            'fee_bidding': fee_bidding,
-            'fee_construction': fee_construction,
-            'fee_record_drawings': fee_record_drawings if include_record_drawings else "",
-            'invoice_email': invoice_email,
-            'invoice_copy': invoice_copy,
-            'project_manager': project_manager,
-            'senior_vp': senior_vp,
-        }
-        
-        with st.spinner("Generating document..."):
+    # Validation check before generation
+    required_fields = {
+        'Client Contact': client_contact,
+        'Company Name': company_name,
+        'Project Name': project_name,
+        'Project Address': project_address,
+        'Project City': project_city,
+    }
+    
+    missing_fields = [field for field, value in required_fields.items() if not value]
+    
+    if missing_fields:
+        st.markdown(f"""
+        <div class="warning-box">
+            <h4>⚠️ Missing Required Information</h4>
+            <p>Please complete the following fields before generating:</p>
+            <ul>
+                {"".join([f"<li>{field}</li>" for field in missing_fields])}
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("🚀 Generate MEP Proposal", 
+                    type="primary", 
+                    use_container_width=True,
+                    disabled=bool(missing_fields)):
+            
+            # Collect all form data
+            form_data = {
+                'date': proposal_date.strftime("%B %d, %Y"),
+                'client_title': client_title,
+                'client_contact': client_contact,
+                'company_name': company_name,
+                'address1': address1,
+                'address2': address2,
+                'project_name': project_name,
+                'project_address': project_address,
+                'project_city': project_city,
+                'project_state': project_state,
+                'is_new_building': is_new_building,
+                'is_renovation': is_renovation,
+                'building_stories': building_stories,
+                'total_area': total_area,
+                'construction_phases': construction_phases,
+                'separate_buildings': separate_buildings,
+                'core_and_shell': core_and_shell,
+                'leed_rating': leed_rating,
+                'construction_budget': construction_budget,
+                'unit_types': unit_types,
+                'typical_floors': typical_floors,
+                'retail_core_shell': retail_core_shell,
+                'retail_electrical': retail_electrical if retail_core_shell else False,
+                'retail_plumbing': retail_plumbing if retail_core_shell else False,
+                'retail_food_beverage': retail_food_beverage if retail_core_shell else False,
+                'retail_mechanical': retail_mechanical if retail_core_shell else False,
+                'hvac_system': hvac_system,
+                'hvac_residential_highrise': hvac_residential_highrise,
+                'hvac_existing_reuse': hvac_existing_reuse,
+                'outside_air_unit': outside_air_unit,
+                'exhaust_system': exhaust_system,
+                'parking_garage': parking_garage,
+                'smoke_control': smoke_control,
+                'elevator_hoistway': elevator_hoistway,
+                'water_service': water_service,
+                'roof_drainage': roof_drainage,
+                'roof_storm_drain': roof_storm_drain,
+                'parking_garage_drain': parking_garage_drain,
+                'water_oil_separator': water_oil_separator,
+                'sump_pump': sump_pump,
+                'booster_pump': booster_pump,
+                'sanitary_vent': sanitary_vent,
+                'grease_waste': grease_waste,
+                'natural_gas': natural_gas,
+                'fuel_delivery': fuel_delivery,
+                'civil_coordination': civil_coordination,
+                'existing_electrical_renovation': existing_electrical_renovation,
+                'power_receptacles': power_receptacles,
+                'core_shell_electrical': core_shell_electrical,
+                'lighting_coordination': lighting_coordination,
+                'lightning_protection': lightning_protection,
+                'emergency_generator': emergency_generator,
+                'ev_charging': ev_charging,
+                'ev_ready_spaces': ev_ready_spaces if ev_charging == "Included" else "",
+                'ev_capable_spaces': ev_capable_spaces if ev_charging == "Included" else "",
+                'fire_alarm': fire_alarm,
+                'technology_design': technology_design,
+                'fire_pump': fire_pump,
+                'weekly_meetings': weekly_meetings,
+                'revit_lod': revit_lod,
+                'revit_coordination_hours': revit_coordination_hours,
+                'sd_existing_survey': sd_existing_survey,
+                'sd_site_visit_hours': sd_site_visit_hours if sd_existing_survey else "",
+                'sd_weeks': sd_weeks,
+                'sd_meeting_hours': sd_meeting_hours,
+                'sd_total_meetings': sd_total_meetings,
+                'dd_weeks': dd_weeks,
+                'dd_meeting_hours': dd_meeting_hours,
+                'dd_total_meetings': dd_total_meetings,
+                'dd_rounds': dd_rounds,
+                'cd_weeks': cd_weeks,
+                'cd_meeting_hours': cd_meeting_hours,
+                'cd_total_meetings': cd_total_meetings,
+                'cd_percentages': cd_percentages,
+                'site_visits': site_visits,
+                'include_record_drawings': include_record_drawings,
+                'record_drawings_hours': record_drawings_hours if include_record_drawings else "",
+                'fee_sd': format_currency(fee_sd) if fee_sd else "XXX",
+                'fee_dd': format_currency(fee_dd) if fee_dd else "XXX",
+                'fee_cd': format_currency(fee_cd) if fee_cd else "XXX",
+                'fee_bidding': format_currency(fee_bidding) if fee_bidding else "XXX",
+                'fee_construction': format_currency(fee_construction) if fee_construction else "XXX",
+                'fee_record_drawings': format_currency(fee_record_drawings) if include_record_drawings and fee_record_drawings else "",
+                'invoice_email': invoice_email,
+                'invoice_copy': invoice_copy,
+                'project_manager': project_manager,
+                'senior_vp': senior_vp,
+            }
+            
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
             try:
-                doc = create_proposal_document(form_data)
+                status_text.text("Initializing document...")
+                progress_bar.progress(20)
                 
-                # Save to BytesIO
+                status_text.text("Creating proposal structure...")
+                doc = create_proposal_document(form_data)
+                progress_bar.progress(60)
+                
+                status_text.text("Formatting document...")
                 buffer = BytesIO()
                 doc.save(buffer)
                 buffer.seek(0)
+                progress_bar.progress(90)
                 
-                # Create filename
-                filename = f"MEP_Proposal_{company_name.replace(' ', '_') if company_name else 'Draft'}_{datetime.now().strftime('%Y-%m-%d')}.docx"
+                status_text.text("Finalizing...")
+                filename = f"MEP_Proposal_{company_name.replace(' ', '_') if company_name else 'Draft'}_{datetime.now().strftime('%Y%m%d')}.docx"
+                progress_bar.progress(100)
                 
-                st.success("✅ Document generated successfully!")
+                status_text.empty()
+                progress_bar.empty()
+                
+                st.markdown("""
+                <div class="success-box">
+                    <h4>✅ Document Generated Successfully!</h4>
+                    <p>Your professional MEP proposal is ready for download.</p>
+                </div>
+                """, unsafe_allow_html=True)
                 
                 st.download_button(
                     label="📥 Download Word Document",
@@ -1213,14 +1319,16 @@ with tab6:
                 )
                 
             except Exception as e:
-                st.error(f"Error generating document: {str(e)}")
-                st.exception(e)
+                st.error(f"❌ Error generating document: {str(e)}")
+                with st.expander("Show Error Details"):
+                    st.exception(e)
 
 # Footer
 st.markdown("---")
 st.markdown("""
-<div style="text-align: center; color: #666; font-size: 12px;">
-    MEP Proposal Generator v2.0 | Kimley-Horn Engineering Services<br>
-    Footer appears on every page of generated document (8pt font)
+<div style="text-align: center; color: #666; font-size: 12px; padding: 20px;">
+    <strong>MEP Proposal Generator v2.1</strong> | Kimley-Horn Engineering Services<br>
+    Footer appears on every page of generated document (8pt font)<br>
+    <em>For support, contact your IT administrator</em>
 </div>
 """, unsafe_allow_html=True)
