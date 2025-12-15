@@ -1177,12 +1177,8 @@ with tab5:
 with tab6:
     st.subheader("Generate Proposal Document")
     
-    st.markdown("""
-    <div class="info-box">
-        <h4>📄 Ready to Generate Your Proposal?</h4>
-        <p>Review your inputs in the other tabs, then click below to generate your professional Word document with proper headers and footers on every page.</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # Use native Streamlit components instead of HTML for better visibility
+    st.info("📄 **Ready to Generate Your Proposal?**\n\nReview your inputs in the other tabs, then click below to generate your professional Word document with proper headers and footers on every page.")
     
     # Validation check before generation
     required_fields = {
@@ -1196,158 +1192,137 @@ with tab6:
     missing_fields = [field for field, value in required_fields.items() if not value]
     
     if missing_fields:
-        st.markdown(f"""
-        <div class="warning-box">
-            <h4>⚠️ Missing Required Information</h4>
-            <p>Please complete the following fields before generating:</p>
-            <ul>
-                {"".join([f"<li>{field}</li>" for field in missing_fields])}
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
+        st.warning(f"⚠️ **Missing Required Information**\n\nPlease complete the following fields before generating:\n\n" + "\n".join([f"- {field}" for field in missing_fields]))
     
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        if st.button("🚀 Generate MEP Proposal", 
-                    type="primary", 
-                    use_container_width=True,
-                    disabled=bool(missing_fields)):
+    # Generate button
+    if st.button("🚀 Generate MEP Proposal", 
+                type="primary", 
+                use_container_width=True,
+                disabled=bool(missing_fields)):
+        
+        # Collect all form data
+        form_data = {
+            'date': proposal_date.strftime("%B %d, %Y"),
+            'client_title': client_title,
+            'client_contact': client_contact,
+            'company_name': company_name,
+            'address1': address1,
+            'address2': address2,
+            'project_name': project_name,
+            'project_address': project_address,
+            'project_city': project_city,
+            'project_state': project_state,
+            'is_new_building': is_new_building,
+            'is_renovation': is_renovation,
+            'building_stories': building_stories,
+            'total_area': total_area,
+            'construction_phases': construction_phases,
+            'separate_buildings': separate_buildings,
+            'core_and_shell': core_and_shell,
+            'leed_rating': leed_rating,
+            'construction_budget': construction_budget,
+            'unit_types': unit_types,
+            'typical_floors': typical_floors,
+            'retail_core_shell': retail_core_shell,
+            'retail_electrical': retail_electrical if retail_core_shell else False,
+            'retail_plumbing': retail_plumbing if retail_core_shell else False,
+            'retail_food_beverage': retail_food_beverage if retail_core_shell else False,
+            'retail_mechanical': retail_mechanical if retail_core_shell else False,
+            'hvac_system': hvac_system,
+            'hvac_residential_highrise': hvac_residential_highrise,
+            'hvac_existing_reuse': hvac_existing_reuse,
+            'outside_air_unit': outside_air_unit,
+            'exhaust_system': exhaust_system,
+            'parking_garage': parking_garage,
+            'smoke_control': smoke_control,
+            'elevator_hoistway': elevator_hoistway,
+            'water_service': water_service,
+            'roof_drainage': roof_drainage,
+            'roof_storm_drain': roof_storm_drain,
+            'parking_garage_drain': parking_garage_drain,
+            'water_oil_separator': water_oil_separator,
+            'sump_pump': sump_pump,
+            'booster_pump': booster_pump,
+            'sanitary_vent': sanitary_vent,
+            'grease_waste': grease_waste,
+            'natural_gas': natural_gas,
+            'fuel_delivery': fuel_delivery,
+            'civil_coordination': civil_coordination,
+            'existing_electrical_renovation': existing_electrical_renovation,
+            'power_receptacles': power_receptacles,
+            'core_shell_electrical': core_shell_electrical,
+            'lighting_coordination': lighting_coordination,
+            'lightning_protection': lightning_protection,
+            'emergency_generator': emergency_generator,
+            'ev_charging': ev_charging,
+            'ev_ready_spaces': ev_ready_spaces if ev_charging == "Included" else "",
+            'ev_capable_spaces': ev_capable_spaces if ev_charging == "Included" else "",
+            'fire_alarm': fire_alarm,
+            'technology_design': technology_design,
+            'fire_pump': fire_pump,
+            'weekly_meetings': weekly_meetings,
+            'revit_lod': revit_lod,
+            'revit_coordination_hours': revit_coordination_hours,
+            'sd_existing_survey': sd_existing_survey,
+            'sd_site_visit_hours': sd_site_visit_hours if sd_existing_survey else "",
+            'sd_weeks': sd_weeks,
+            'sd_meeting_hours': sd_meeting_hours,
+            'sd_total_meetings': sd_total_meetings,
+            'dd_weeks': dd_weeks,
+            'dd_meeting_hours': dd_meeting_hours,
+            'dd_total_meetings': dd_total_meetings,
+            'dd_rounds': dd_rounds,
+            'cd_weeks': cd_weeks,
+            'cd_meeting_hours': cd_meeting_hours,
+            'cd_total_meetings': cd_total_meetings,
+            'cd_percentages': cd_percentages,
+            'site_visits': site_visits,
+            'include_record_drawings': include_record_drawings,
+            'record_drawings_hours': record_drawings_hours if include_record_drawings else "",
+            'fee_sd': format_currency(fee_sd) if fee_sd else "XXX",
+            'fee_dd': format_currency(fee_dd) if fee_dd else "XXX",
+            'fee_cd': format_currency(fee_cd) if fee_cd else "XXX",
+            'fee_bidding': format_currency(fee_bidding) if fee_bidding else "XXX",
+            'fee_construction': format_currency(fee_construction) if fee_construction else "XXX",
+            'fee_record_drawings': format_currency(fee_record_drawings) if include_record_drawings and fee_record_drawings else "",
+            'invoice_email': invoice_email,
+            'invoice_copy': invoice_copy,
+            'project_manager': project_manager,
+            'senior_vp': senior_vp,
+        }
+        
+        progress_bar = st.progress(0, text="Initializing document...")
+        
+        try:
+            progress_bar.progress(20, text="Creating proposal structure...")
+            doc = create_proposal_document(form_data)
             
-            # Collect all form data
-            form_data = {
-                'date': proposal_date.strftime("%B %d, %Y"),
-                'client_title': client_title,
-                'client_contact': client_contact,
-                'company_name': company_name,
-                'address1': address1,
-                'address2': address2,
-                'project_name': project_name,
-                'project_address': project_address,
-                'project_city': project_city,
-                'project_state': project_state,
-                'is_new_building': is_new_building,
-                'is_renovation': is_renovation,
-                'building_stories': building_stories,
-                'total_area': total_area,
-                'construction_phases': construction_phases,
-                'separate_buildings': separate_buildings,
-                'core_and_shell': core_and_shell,
-                'leed_rating': leed_rating,
-                'construction_budget': construction_budget,
-                'unit_types': unit_types,
-                'typical_floors': typical_floors,
-                'retail_core_shell': retail_core_shell,
-                'retail_electrical': retail_electrical if retail_core_shell else False,
-                'retail_plumbing': retail_plumbing if retail_core_shell else False,
-                'retail_food_beverage': retail_food_beverage if retail_core_shell else False,
-                'retail_mechanical': retail_mechanical if retail_core_shell else False,
-                'hvac_system': hvac_system,
-                'hvac_residential_highrise': hvac_residential_highrise,
-                'hvac_existing_reuse': hvac_existing_reuse,
-                'outside_air_unit': outside_air_unit,
-                'exhaust_system': exhaust_system,
-                'parking_garage': parking_garage,
-                'smoke_control': smoke_control,
-                'elevator_hoistway': elevator_hoistway,
-                'water_service': water_service,
-                'roof_drainage': roof_drainage,
-                'roof_storm_drain': roof_storm_drain,
-                'parking_garage_drain': parking_garage_drain,
-                'water_oil_separator': water_oil_separator,
-                'sump_pump': sump_pump,
-                'booster_pump': booster_pump,
-                'sanitary_vent': sanitary_vent,
-                'grease_waste': grease_waste,
-                'natural_gas': natural_gas,
-                'fuel_delivery': fuel_delivery,
-                'civil_coordination': civil_coordination,
-                'existing_electrical_renovation': existing_electrical_renovation,
-                'power_receptacles': power_receptacles,
-                'core_shell_electrical': core_shell_electrical,
-                'lighting_coordination': lighting_coordination,
-                'lightning_protection': lightning_protection,
-                'emergency_generator': emergency_generator,
-                'ev_charging': ev_charging,
-                'ev_ready_spaces': ev_ready_spaces if ev_charging == "Included" else "",
-                'ev_capable_spaces': ev_capable_spaces if ev_charging == "Included" else "",
-                'fire_alarm': fire_alarm,
-                'technology_design': technology_design,
-                'fire_pump': fire_pump,
-                'weekly_meetings': weekly_meetings,
-                'revit_lod': revit_lod,
-                'revit_coordination_hours': revit_coordination_hours,
-                'sd_existing_survey': sd_existing_survey,
-                'sd_site_visit_hours': sd_site_visit_hours if sd_existing_survey else "",
-                'sd_weeks': sd_weeks,
-                'sd_meeting_hours': sd_meeting_hours,
-                'sd_total_meetings': sd_total_meetings,
-                'dd_weeks': dd_weeks,
-                'dd_meeting_hours': dd_meeting_hours,
-                'dd_total_meetings': dd_total_meetings,
-                'dd_rounds': dd_rounds,
-                'cd_weeks': cd_weeks,
-                'cd_meeting_hours': cd_meeting_hours,
-                'cd_total_meetings': cd_total_meetings,
-                'cd_percentages': cd_percentages,
-                'site_visits': site_visits,
-                'include_record_drawings': include_record_drawings,
-                'record_drawings_hours': record_drawings_hours if include_record_drawings else "",
-                'fee_sd': format_currency(fee_sd) if fee_sd else "XXX",
-                'fee_dd': format_currency(fee_dd) if fee_dd else "XXX",
-                'fee_cd': format_currency(fee_cd) if fee_cd else "XXX",
-                'fee_bidding': format_currency(fee_bidding) if fee_bidding else "XXX",
-                'fee_construction': format_currency(fee_construction) if fee_construction else "XXX",
-                'fee_record_drawings': format_currency(fee_record_drawings) if include_record_drawings and fee_record_drawings else "",
-                'invoice_email': invoice_email,
-                'invoice_copy': invoice_copy,
-                'project_manager': project_manager,
-                'senior_vp': senior_vp,
-            }
+            progress_bar.progress(60, text="Formatting document...")
+            buffer = BytesIO()
+            doc.save(buffer)
+            buffer.seek(0)
             
-            progress_bar = st.progress(0)
-            status_text = st.empty()
+            progress_bar.progress(90, text="Finalizing...")
+            filename = f"MEP_Proposal_{company_name.replace(' ', '_') if company_name else 'Draft'}_{datetime.now().strftime('%Y%m%d')}.docx"
             
-            try:
-                status_text.text("Initializing document...")
-                progress_bar.progress(20)
-                
-                status_text.text("Creating proposal structure...")
-                doc = create_proposal_document(form_data)
-                progress_bar.progress(60)
-                
-                status_text.text("Formatting document...")
-                buffer = BytesIO()
-                doc.save(buffer)
-                buffer.seek(0)
-                progress_bar.progress(90)
-                
-                status_text.text("Finalizing...")
-                filename = f"MEP_Proposal_{company_name.replace(' ', '_') if company_name else 'Draft'}_{datetime.now().strftime('%Y%m%d')}.docx"
-                progress_bar.progress(100)
-                
-                status_text.empty()
-                progress_bar.empty()
-                
-                st.markdown("""
-                <div class="success-box">
-                    <h4>✅ Document Generated Successfully!</h4>
-                    <p>Your professional MEP proposal is ready for download.</p>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                st.download_button(
-                    label="📥 Download Word Document",
-                    data=buffer,
-                    file_name=filename,
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    type="primary",
-                    use_container_width=True
-                )
-                
-            except Exception as e:
-                st.error(f"❌ Error generating document: {str(e)}")
-                with st.expander("Show Error Details"):
-                    st.exception(e)
+            progress_bar.progress(100, text="Complete!")
+            
+            st.success("✅ **Document Generated Successfully!**\n\nYour professional MEP proposal is ready for download.")
+            
+            st.download_button(
+                label="📥 Download Word Document",
+                data=buffer.getvalue(),
+                file_name=filename,
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                type="primary",
+                use_container_width=True
+            )
+            
+        except Exception as e:
+            progress_bar.empty()
+            st.error(f"❌ **Error generating document:** {str(e)}")
+            with st.expander("Show Error Details"):
+                st.exception(e)
 
 # Footer
 st.markdown("---")
