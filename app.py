@@ -87,10 +87,10 @@ def format_currency(value):
 
 def setup_styles(doc):
     """Setup proper Word styles for the document"""
-    # Normal style
+    # Normal style - 9pt Arial per template
     normal = doc.styles['Normal']
     normal.font.name = 'Arial'
-    normal.font.size = Pt(11)
+    normal.font.size = Pt(9)
     normal.paragraph_format.space_after = Pt(0)
     normal.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
     
@@ -102,100 +102,147 @@ def setup_styles(doc):
     
     bullet_style.base_style = doc.styles['Normal']
     bullet_style.font.name = 'Arial'
-    bullet_style.font.size = Pt(11)
+    bullet_style.font.size = Pt(9)
     bullet_style.paragraph_format.left_indent = Inches(0.25)
     bullet_style.paragraph_format.space_after = Pt(0)
 
 
 def add_header_with_logo(section, page_num=None):
-    """Add header with Kimley-Horn logo - exact template match"""
+    """Add header with Kimley-Horn logo - exact match to brand image"""
     header = section.header
     header.is_linked_to_previous = False
     
     p = header.paragraphs[0] if header.paragraphs else header.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.LEFT
     
-    # "Kimley" in dark gray
+    # "Kimley" in dark grey/black
     run1 = p.add_run("Kimley")
-    run1.font.size = Pt(22)
+    run1.font.size = Pt(28)
     run1.font.bold = False
-    run1.font.color.rgb = RGBColor(64, 64, 64)
+    run1.font.color.rgb = RGBColor(88, 89, 91)  # Dark grey from logo
     run1.font.name = 'Arial'
     
-    # "»" symbol in dark red
+    # "»" symbol in dark grey (matching Kimley color, transitioning to red)
     run2 = p.add_run("»")
-    run2.font.size = Pt(22)
+    run2.font.size = Pt(28)
     run2.font.bold = False
-    run2.font.color.rgb = RGBColor(139, 0, 0)
+    run2.font.color.rgb = RGBColor(88, 89, 91)  # Dark grey
     run2.font.name = 'Arial'
     
-    # "Horn" in dark red
+    # "Horn" in deep red
     run3 = p.add_run("Horn")
-    run3.font.size = Pt(22)
+    run3.font.size = Pt(28)
     run3.font.bold = False
-    run3.font.color.rgb = RGBColor(139, 0, 0)
+    run3.font.color.rgb = RGBColor(166, 25, 46)  # Deep red from logo
     run3.font.name = 'Arial'
 
 
 def add_footer(section, text_left, text_center, text_right):
-    """Add colored footer - exact column widths: 1.1", 4.23", 0.96" """
+    """Add colored footer with exact specs: Col1=1.1", Col2=4.23", Col3=0.96", Height=0.22", with white gaps between"""
     footer = section.footer
     footer.is_linked_to_previous = False
     
-    table = footer.add_table(rows=1, cols=3, width=Inches(6.29))
+    # Create table with 5 columns (3 content + 2 white gaps)
+    # White gaps will be very small - approximately 0.05" each
+    table = footer.add_table(rows=1, cols=5)
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     table.autofit = False
     
-    table.columns[0].width = Inches(1.1)
-    table.columns[1].width = Inches(4.23)
-    table.columns[2].width = Inches(0.96)
+    # Set exact column widths: content + tiny white gaps between
+    gap_width = Inches(0.05)  # Small white space between colored sections
+    table.columns[0].width = Inches(1.1)      # Grey section
+    table.columns[1].width = gap_width        # White gap
+    table.columns[2].width = Inches(4.23)     # Red/mauve section (address)
+    table.columns[3].width = gap_width        # White gap
+    table.columns[4].width = Inches(0.96)     # Red/mauve section (phone)
     
     cells = table.rows[0].cells
+    
+    # Set row height to exactly 0.22"
+    row = table.rows[0]
+    row.height = Inches(0.22)
+    row.height_rule = 1  # Exact height (not "at least")
+    
+    # Colors
     grey_fill = 'ABABAB'
     red_fill = 'BF8F96'
     
-    def set_cell_margins(cell):
+    def set_cell_margins(cell, tight=True):
         tc = cell._tc
         tcPr = tc.get_or_add_tcPr()
         tcMar = OxmlElement('w:tcMar')
-        for margin_name in ['top', 'bottom']:
-            margin = OxmlElement(f'w:{margin_name}')
-            margin.set(qn('w:w'), '30')
-            margin.set(qn('w:type'), 'dxa')
-            tcMar.append(margin)
-        for margin_name in ['left', 'right']:
-            margin = OxmlElement(f'w:{margin_name}')
-            margin.set(qn('w:w'), '50')
-            margin.set(qn('w:type'), 'dxa')
-            tcMar.append(margin)
+        if tight:
+            # Very tight margins for 0.22" height
+            for margin_name in ['top', 'bottom']:
+                margin = OxmlElement(f'w:{margin_name}')
+                margin.set(qn('w:w'), '20')
+                margin.set(qn('w:type'), 'dxa')
+                tcMar.append(margin)
+            for margin_name in ['left', 'right']:
+                margin = OxmlElement(f'w:{margin_name}')
+                margin.set(qn('w:w'), '40')
+                margin.set(qn('w:type'), 'dxa')
+                tcMar.append(margin)
+        else:
+            # No margins for white gap cells
+            for margin_name in ['top', 'bottom', 'left', 'right']:
+                margin = OxmlElement(f'w:{margin_name}')
+                margin.set(qn('w:w'), '0')
+                margin.set(qn('w:type'), 'dxa')
+                tcMar.append(margin)
         tcPr.append(tcMar)
     
-    for i, (cell, text, fill) in enumerate([
-        (cells[0], text_left, grey_fill),
-        (cells[1], text_center, red_fill),
-        (cells[2], text_right, red_fill)
-    ]):
+    def set_cell_color_and_text(cell, text, fill_color):
+        """Set cell background color and text"""
         cell.text = text
-        cell_shading = OxmlElement('w:shd')
-        cell_shading.set(qn('w:fill'), fill)
-        cell._tc.get_or_add_tcPr().append(cell_shading)
-        set_cell_margins(cell)
         
+        # Set background color
+        cell_shading = OxmlElement('w:shd')
+        cell_shading.set(qn('w:fill'), fill_color)
+        cell._tc.get_or_add_tcPr().append(cell_shading)
+        
+        # Set vertical alignment to center
         tc = cell._tc
         tcPr = tc.get_or_add_tcPr()
         vAlign = OxmlElement('w:vAlign')
         vAlign.set(qn('w:val'), 'center')
         tcPr.append(vAlign)
         
+        # Format text
         for paragraph in cell.paragraphs:
             paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
             paragraph.paragraph_format.space_before = Pt(0)
             paragraph.paragraph_format.space_after = Pt(0)
+            paragraph.paragraph_format.line_spacing = 1.0
             for run in paragraph.runs:
                 run.font.size = Pt(8)
                 run.font.color.rgb = RGBColor(255, 255, 255)
                 run.font.name = 'Arial'
+                run.font.bold = False
     
+    # Column 0: Grey section (kimley-horn.com)
+    set_cell_margins(cells[0], tight=True)
+    set_cell_color_and_text(cells[0], text_left, grey_fill)
+    
+    # Column 1: White gap (no background, no text)
+    set_cell_margins(cells[1], tight=False)
+    cells[1].text = ""
+    # No shading = white
+    
+    # Column 2: Red/mauve section (address)
+    set_cell_margins(cells[2], tight=True)
+    set_cell_color_and_text(cells[2], text_center, red_fill)
+    
+    # Column 3: White gap (no background, no text)
+    set_cell_margins(cells[3], tight=False)
+    cells[3].text = ""
+    # No shading = white
+    
+    # Column 4: Red/mauve section (phone)
+    set_cell_margins(cells[4], tight=True)
+    set_cell_color_and_text(cells[4], text_right, red_fill)
+    
+    # Remove all table borders to make gaps invisible
     tbl = table._tbl
     tblPr = tbl.tblPr if tbl.tblPr is not None else OxmlElement('w:tblPr')
     tblBorders = OxmlElement('w:tblBorders')
@@ -217,7 +264,7 @@ def add_section_header(doc, text):
     run.bold = True
     run.underline = True
     run.font.name = 'Arial'
-    run.font.size = Pt(11)
+    run.font.size = Pt(9)
 
 
 def add_paragraph(doc, text, justify=False):
