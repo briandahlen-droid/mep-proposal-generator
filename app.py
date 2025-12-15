@@ -1,17 +1,17 @@
 """
-MEP Proposal Generator - Streamlit App (Complete & Improved)
+MEP Proposal Generator - Complete Template Version
 Kimley-Horn Engineering Services
-Generates professional .docx proposals with proper headers and footers
-Version 2.1
+Generates professional .docx proposals matching exact template format
+Version 3.0 - Complete Template Implementation
 """
 
 import streamlit as st
 from docx import Document
-from docx.shared import Pt, Inches, RGBColor, Twips
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT
-from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.shared import Pt, Inches, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT, WD_LINE_SPACING
+from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
 from docx.enum.style import WD_STYLE_TYPE
-from docx.oxml.ns import qn, nsmap
+from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 from datetime import datetime
 from io import BytesIO
@@ -42,40 +42,14 @@ st.markdown("""
         color: #ffcccc;
         margin: 5px 0 0 0;
     }
-    .stExpander {
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        margin-bottom: 10px;
-    }
-    .info-box {
-        background-color: #f0f2f6;
-        padding: 15px;
-        border-radius: 8px;
-        border-left: 4px solid #C8102E;
-        margin: 10px 0;
-    }
-    .success-box {
-        background-color: #d4edda;
-        padding: 15px;
-        border-radius: 8px;
-        border-left: 4px solid #28a745;
-        margin: 10px 0;
-    }
-    .warning-box {
-        background-color: #fff3cd;
-        padding: 15px;
-        border-radius: 8px;
-        border-left: 4px solid #ffc107;
-        margin: 10px 0;
-    }
 </style>
 """, unsafe_allow_html=True)
 
 # Header
 st.markdown("""
 <div class="main-header">
-    <h1>📄 MEP Proposal Generator</h1>
-    <p>Kimley-Horn Engineering Services - Professional Proposal Template</p>
+    <h1>📄 MEP Proposal Generator v3.0</h1>
+    <p>Kimley-Horn Engineering Services - Complete Template Match</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -111,35 +85,79 @@ def format_currency(value):
         return value
 
 
+def setup_styles(doc):
+    """Setup proper Word styles for the document"""
+    # Normal style
+    normal = doc.styles['Normal']
+    normal.font.name = 'Arial'
+    normal.font.size = Pt(11)
+    normal.paragraph_format.space_after = Pt(0)
+    normal.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+    
+    # Try to get or create List Bullet style
+    try:
+        bullet_style = doc.styles['List Bullet']
+    except KeyError:
+        bullet_style = doc.styles.add_style('List Bullet', WD_STYLE_TYPE.PARAGRAPH)
+    
+    bullet_style.base_style = doc.styles['Normal']
+    bullet_style.font.name = 'Arial'
+    bullet_style.font.size = Pt(11)
+    bullet_style.paragraph_format.left_indent = Inches(0.25)
+    bullet_style.paragraph_format.space_after = Pt(0)
+
+
+def add_header_with_logo(section, page_num=None):
+    """Add header with Kimley-Horn logo - exact template match"""
+    header = section.header
+    header.is_linked_to_previous = False
+    
+    p = header.paragraphs[0] if header.paragraphs else header.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    
+    # "Kimley" in dark gray
+    run1 = p.add_run("Kimley")
+    run1.font.size = Pt(22)
+    run1.font.bold = False
+    run1.font.color.rgb = RGBColor(64, 64, 64)
+    run1.font.name = 'Arial'
+    
+    # "»" symbol in dark red
+    run2 = p.add_run("»")
+    run2.font.size = Pt(22)
+    run2.font.bold = False
+    run2.font.color.rgb = RGBColor(139, 0, 0)
+    run2.font.name = 'Arial'
+    
+    # "Horn" in dark red
+    run3 = p.add_run("Horn")
+    run3.font.size = Pt(22)
+    run3.font.bold = False
+    run3.font.color.rgb = RGBColor(139, 0, 0)
+    run3.font.name = 'Arial'
+
+
 def add_footer(section, text_left, text_center, text_right):
-    """Add a colored footer with three sections - exact specs: 1.1", 4.23", 0.96" """
+    """Add colored footer - exact column widths: 1.1", 4.23", 0.96" """
     footer = section.footer
     footer.is_linked_to_previous = False
     
-    # Create table with exact column widths from specifications
-    table = footer.add_table(rows=1, cols=3, width=Inches(6.29))  # Total: 1.1 + 4.23 + 0.96
+    table = footer.add_table(rows=1, cols=3, width=Inches(6.29))
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     table.autofit = False
     
-    # Set exact column widths per specifications
-    table.columns[0].width = Inches(1.1)     # kimley-horn.com
-    table.columns[1].width = Inches(4.23)    # address (center)
-    table.columns[2].width = Inches(0.96)    # phone number
+    table.columns[0].width = Inches(1.1)
+    table.columns[1].width = Inches(4.23)
+    table.columns[2].width = Inches(0.96)
     
     cells = table.rows[0].cells
-    
-    # Set row height (removed strict height rule that was causing issues)
-    # The 0.22" will be approximated through padding and font size
-    
-    # Colors from the footer image
-    grey_fill = 'ABABAB'      # Grey for left column
-    red_fill = 'BF8F96'       # Mauve/pink for center and right columns
+    grey_fill = 'ABABAB'
+    red_fill = 'BF8F96'
     
     def set_cell_margins(cell):
         tc = cell._tc
         tcPr = tc.get_or_add_tcPr()
         tcMar = OxmlElement('w:tcMar')
-        # Minimal margins for tight fit
         for margin_name in ['top', 'bottom']:
             margin = OxmlElement(f'w:{margin_name}')
             margin.set(qn('w:w'), '30')
@@ -152,7 +170,6 @@ def add_footer(section, text_left, text_center, text_right):
             tcMar.append(margin)
         tcPr.append(tcMar)
     
-    # Configure each cell
     for i, (cell, text, fill) in enumerate([
         (cells[0], text_left, grey_fill),
         (cells[1], text_center, red_fill),
@@ -164,7 +181,6 @@ def add_footer(section, text_left, text_center, text_right):
         cell._tc.get_or_add_tcPr().append(cell_shading)
         set_cell_margins(cell)
         
-        # Set vertical alignment to center
         tc = cell._tc
         tcPr = tc.get_or_add_tcPr()
         vAlign = OxmlElement('w:vAlign')
@@ -175,14 +191,11 @@ def add_footer(section, text_left, text_center, text_right):
             paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
             paragraph.paragraph_format.space_before = Pt(0)
             paragraph.paragraph_format.space_after = Pt(0)
-            paragraph.paragraph_format.line_spacing = 1.0
             for run in paragraph.runs:
                 run.font.size = Pt(8)
                 run.font.color.rgb = RGBColor(255, 255, 255)
                 run.font.name = 'Arial'
-                run.font.bold = False
     
-    # Remove table borders
     tbl = table._tbl
     tblPr = tbl.tblPr if tbl.tblPr is not None else OxmlElement('w:tblPr')
     tblBorders = OxmlElement('w:tblBorders')
@@ -195,87 +208,58 @@ def add_footer(section, text_left, text_center, text_right):
         tbl.insert(0, tblPr)
 
 
-def add_header_with_logo(section, page_num=None):
-    """Add header with Kimley-Horn logo styling - matches exact branding"""
-    header = section.header
-    header.is_linked_to_previous = False
-    
-    p = header.paragraphs[0] if header.paragraphs else header.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    
-    # "Kimley" in dark gray/black
-    run1 = p.add_run("Kimley")
-    run1.font.size = Pt(22)
-    run1.font.bold = False
-    run1.font.color.rgb = RGBColor(64, 64, 64)  # Dark gray from image
-    run1.font.name = 'Arial'
-    
-    # "»" symbol in dark red
-    run2 = p.add_run("»")
-    run2.font.size = Pt(22)
-    run2.font.bold = False
-    run2.font.color.rgb = RGBColor(139, 0, 0)  # Dark red from image
-    run2.font.name = 'Arial'
-    
-    # "Horn" in dark red
-    run3 = p.add_run("Horn")
-    run3.font.size = Pt(22)
-    run3.font.bold = False
-    run3.font.color.rgb = RGBColor(139, 0, 0)  # Dark red from image
-    run3.font.name = 'Arial'
-    
-    if page_num:
-        tab_stops = p.paragraph_format.tab_stops
-        tab_stops.add_tab_stop(Inches(6.5), WD_TAB_ALIGNMENT.RIGHT)
-        p.add_run("\t")
-        run_page = p.add_run(f"Page {page_num}")
-        run_page.font.size = Pt(11)
-        run_page.font.italic = True
-        run_page.font.name = 'Arial'
-
-
 def add_section_header(doc, text):
-    """Add an underlined section header"""
+    """Add bold and underlined section header - exact template format"""
     p = doc.add_paragraph()
-    p.paragraph_format.space_before = Pt(20)
-    p.paragraph_format.space_after = Pt(10)
+    p.paragraph_format.space_before = Pt(12)
+    p.paragraph_format.space_after = Pt(6)
     run = p.add_run(text)
     run.bold = True
     run.underline = True
+    run.font.name = 'Arial'
+    run.font.size = Pt(11)
+
+
+def add_paragraph(doc, text, justify=False):
+    """Add a normal paragraph"""
+    p = doc.add_paragraph(text)
+    p.paragraph_format.space_after = Pt(0)
+    if justify:
+        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    return p
 
 
 def add_bullet(doc, text):
-    """Add a bullet point"""
-    p = doc.add_paragraph(style='List Bullet')
-    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    p.add_run(text)
+    """Add a standard bullet point"""
+    p = doc.add_paragraph(text, style='List Bullet')
+    p.paragraph_format.space_after = Pt(0)
+    return p
 
 
 def add_sub_bullet(doc, text):
-    """Add a sub-bullet point"""
+    """Add a circle sub-bullet"""
     p = doc.add_paragraph()
     p.paragraph_format.left_indent = Inches(0.5)
-    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    p.paragraph_format.space_after = Pt(0)
     p.add_run("○  " + text)
+    return p
 
 
 def add_sub_sub_bullet(doc, text):
-    """Add a sub-sub-bullet point"""
+    """Add a square sub-sub-bullet"""
     p = doc.add_paragraph()
     p.paragraph_format.left_indent = Inches(1.0)
-    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    p.paragraph_format.space_after = Pt(0)
     p.add_run("▪  " + text)
+    return p
 
 
 def calculate_total(data):
     """Calculate total fee"""
-    fees = [
-        data.get('fee_sd', '0'),
-        data.get('fee_dd', '0'),
-        data.get('fee_cd', '0'),
-        data.get('fee_bidding', '0'),
-        data.get('fee_construction', '0'),
-    ]
+    fees = []
+    for key in ['fee_sd', 'fee_dd', 'fee_cd', 'fee_bidding', 'fee_construction']:
+        fees.append(data.get(key, '0'))
+    
     if data.get('include_record_drawings'):
         fees.append(data.get('fee_record_drawings', '0'))
     
@@ -290,87 +274,69 @@ def calculate_total(data):
 
 
 def create_proposal_document(data):
-    """Generate the complete proposal document"""
+    """Generate complete proposal matching template exactly"""
     doc = Document()
     
-    # Set default font to Arial (body text)
-    style = doc.styles['Normal']
-    style.font.name = 'Arial'
-    style.font.size = Pt(11)
+    # Setup styles
+    setup_styles(doc)
     
+    # Set margins
     for section in doc.sections:
         section.top_margin = Inches(1)
         section.bottom_margin = Inches(0.75)
         section.left_margin = Inches(1)
         section.right_margin = Inches(1)
     
+    # Add header and footer
     section = doc.sections[0]
     add_header_with_logo(section)
-    add_footer(section, "kimley-horn.com", "200 Central Avenue Suite 600 St. Petersburg, FL 33701", "727-547-3999")
+    add_footer(section, "kimley-horn.com", 
+               "200 Central Avenue Suite 600 St. Petersburg, FL 33701", 
+               "727-547-3999")
+    
+    # === DOCUMENT CONTENT ===
     
     # Date
-    p = doc.add_paragraph()
-    p.add_run(data['date'])
-    p.paragraph_format.space_after = Pt(0)
+    add_paragraph(doc, data['date'])
+    doc.add_paragraph()  # Blank line
     
     # Recipient
-    p = doc.add_paragraph()
-    p.paragraph_format.space_after = Pt(0)
-    p.add_run(f"{data['client_title']} {data['client_contact']}")
-    
-    p = doc.add_paragraph()
-    p.paragraph_format.space_after = Pt(0)
-    p.add_run(data['company_name'])
-    
+    add_paragraph(doc, f"{data['client_title']} {data['client_contact']}")
+    add_paragraph(doc, data['company_name'])
     if data.get('address1'):
-        p = doc.add_paragraph()
-        p.paragraph_format.space_after = Pt(0)
-        p.add_run(data['address1'])
-    
+        add_paragraph(doc, data['address1'])
     if data.get('address2'):
-        p = doc.add_paragraph()
-        p.paragraph_format.space_after = Pt(0)
-        p.add_run(data['address2'])
-    
-    p = doc.add_paragraph()
-    p.paragraph_format.space_after = Pt(0)
+        add_paragraph(doc, data['address2'])
+    doc.add_paragraph()  # Blank line
     
     # Re: line
+    add_paragraph(doc, "Re:\tLetter Agreement for Professional Services for")
     p = doc.add_paragraph()
-    p.paragraph_format.space_after = Pt(0)
-    p.add_run("Re:\tLetter Agreement for Professional Services for")
-    
-    p = doc.add_paragraph()
-    p.paragraph_format.space_after = Pt(0)
     p.paragraph_format.left_indent = Inches(0.5)
     p.add_run(data['project_name'])
-    
     p = doc.add_paragraph()
-    p.paragraph_format.space_after = Pt(0)
     p.paragraph_format.left_indent = Inches(0.5)
     p.add_run(f"{data['project_address']}, {data['project_city']}, {data['project_state']}")
-    
-    p = doc.add_paragraph()
-    p.paragraph_format.space_after = Pt(0)
+    doc.add_paragraph()  # Blank line
     
     # Salutation
     last_name = data['client_contact'].split()[-1] if data['client_contact'] else "XXX"
-    p = doc.add_paragraph()
-    p.add_run(f"Dear {data['client_title']} {last_name}:")
-    p.paragraph_format.space_after = Pt(0)
+    add_paragraph(doc, f"Dear {data['client_title']} {last_name}:")
+    doc.add_paragraph()  # Blank line
     
     # Opening paragraph
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    p.add_run(f"Kimley-Horn and Associates, Inc. (\"Kimley-Horn\" or \"Consultant\") is pleased to submit this Letter Agreement (the \"Agreement\") to {data['company_name'] or '___________'} (\"Client\") for providing mechanical, electrical, plumbing, and fire protection consulting engineering services for the proposed {data['project_name'] or 'XX'} development located on {data['project_address'] or 'XXX Avenue'} in {data['project_city'] or 'XXX'}, {data['project_state'] or 'XX'} (\"Project\").")
+    opening_text = f"Kimley-Horn and Associates, Inc. (\"Kimley-Horn\" or \"Consultant\") is pleased to submit this Letter Agreement (the \"Agreement\") to {data['company_name'] or '___________'} (\"Client\") for providing mechanical, electrical, plumbing, and fire protection consulting engineering services for the proposed {data['project_name'] or 'XX'} development located on {data['project_address'] or 'XXX Avenue'} in {data['project_city'] or 'XXX'}, {data['project_state'] or 'XX'} (\"Project\")."
+    add_paragraph(doc, opening_text, justify=True)
+    doc.add_paragraph()  # Blank line
     
-    # === PROJECT UNDERSTANDING ===
+    # === PROJECT UNDERSTANDING AND ASSUMPTIONS ===
     add_section_header(doc, "Project Understanding and Assumptions")
     
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    p.add_run("Kimley-Horn's scope and fee are based on the following project understanding and assumptions. If any of these assumptions are not correct, then the scope and fee provided below may change:")
+    intro_text = "Kimley-Horn's scope and fee are based on the following project understanding and assumptions. If any of these assumptions are not correct, then the scope and fee provided below may change:"
+    add_paragraph(doc, intro_text, justify=True)
+    doc.add_paragraph()  # Blank line
     
+    # Add assumptions based on selections
     if data.get('is_new_building'):
         add_bullet(doc, f"{data['company_name'] or 'Client'} will be building a new building located at {data['project_address'] or 'XXX'}, {data['project_state'] or 'XX'}.")
     
@@ -401,23 +367,27 @@ def create_proposal_document(data):
     if data.get('typical_floors'):
         add_bullet(doc, f"Kimley-Horn will provide MEP design scope of services below for up to {data['typical_floors']} typical floors.")
     
-    # Retail Core & Shell
+    # Retail Core & Shell section
     if data.get('retail_core_shell'):
+        doc.add_paragraph()  # Blank line before section
         add_bullet(doc, "All retail will be provided as core and shell. All retail core and shell spaces will be designed based on the following understanding:")
+        
         if data.get('retail_electrical'):
             add_sub_bullet(doc, "Electrical systems will be designed as a meter center and empty conduits as needed for future tenant connection.")
             add_sub_sub_bullet(doc, "Design and engineering of tenant panel and transformers for tenant are not included in this scope of services.")
+        
         if data.get('retail_plumbing'):
             add_sub_bullet(doc, "Plumbing systems will be provided with sanitary, vent, water, grease waste and gas stub-ins to the space and capped for future tenant connection. No plumbing connections and distribution piping will be designed for tenant spaces as part of this scope of services.")
+        
         if data.get('retail_food_beverage'):
             add_sub_bullet(doc, "Retail spaces are to be food and beverage retail with cooking within the retail space. Occupancy loads provided by the Client or Client's architect and / or owner will be the basis for grease trap sizing.")
+        
         if data.get('retail_mechanical'):
             add_sub_bullet(doc, "Mechanical systems will be provided as condenser water systems with piping stub-ins for future tenant provided water source heat pumps.")
     
-    # === HVAC DESIGN BASIS ===
-    add_section_header(doc, "HVAC Design Basis")
-    p = doc.add_paragraph()
-    p.add_run("The HVAC design shall be based on the following:")
+    # HVAC Design Basis
+    doc.add_paragraph()  # Blank line
+    add_bullet(doc, "The HVAC design shall be based on the following:")
     
     hvac_descriptions = {
         'Centralized Chilled Water': 'The system will be designed as a centralized chilled water system with individual air handler per floor.',
@@ -427,7 +397,9 @@ def create_proposal_document(data):
         'VRF': 'The systems will be designed as Variable Refrigerant Flow units with heat recovery units located throughout the space.',
         'Split DX': 'The system will be designed as a split DX system with indoor air handlers located throughout the building.'
     }
-    add_sub_bullet(doc, hvac_descriptions.get(data.get('hvac_system', 'Centralized Chilled Water'), ''))
+    
+    if data.get('hvac_system'):
+        add_sub_bullet(doc, hvac_descriptions.get(data['hvac_system'], ''))
     
     if data.get('hvac_residential_highrise'):
         add_sub_bullet(doc, "Kimley-Horn will work with the Client's architect and Client to select the mechanical system during the conceptual and schematic design phase. Variable refrigerant flow, DX, and condenser water systems will be evaluated for this project.")
@@ -443,11 +415,13 @@ def create_proposal_document(data):
         'Individual Fans': 'Exhaust will be provided as individual exhaust fans discharging out of the side through louvers.',
         'Through OA Unit': 'Exhaust systems will be collected and routed back through the dedicated outside air unit.'
     }
-    add_sub_bullet(doc, exhaust_descriptions.get(data.get('exhaust_system', 'Dedicated Roof Fan'), ''))
+    
+    if data.get('exhaust_system'):
+        add_sub_bullet(doc, exhaust_descriptions.get(data['exhaust_system'], ''))
     
     if data.get('parking_garage') == 'Open-Air':
         add_sub_bullet(doc, "The Parking garage will be designed as an open-air parking garage with no mechanical ventilation to be provided.")
-    else:
+    elif data.get('parking_garage') == 'Enclosed':
         add_sub_bullet(doc, "The Parking garage will be designed as an enclosed parking garage with mechanical ventilation.")
     
     if data.get('smoke_control'):
@@ -456,14 +430,13 @@ def create_proposal_document(data):
     if data.get('elevator_hoistway'):
         add_sub_bullet(doc, "Elevator hoist ways are enclosed lobbies and no hoist way pressurization will be designed.")
     
-    # === PLUMBING DESIGN BASIS ===
-    add_section_header(doc, "Plumbing Design Basis")
-    p = doc.add_paragraph()
-    p.add_run("The plumbing design shall be based on the following:")
+    # Plumbing Design Basis
+    doc.add_paragraph()  # Blank line
+    add_bullet(doc, "The plumbing design shall be based on the following:")
     
     if data.get('water_service') == 'Single Meter':
         add_sub_bullet(doc, "Domestic water design is included and for the purposes of this letter agreement is assumed that domestic water service will be provided as a single meter to the building from the public water main.")
-    else:
+    elif data.get('water_service') == 'Multiple Meters':
         add_sub_bullet(doc, "Domestic water design is included and for the purposes of this letter agreement is assumed that domestic water service will be provided to the building as multiple meters for each space from the public water main.")
     
     if data.get('roof_storm_drain'):
@@ -495,16 +468,15 @@ def create_proposal_document(data):
     
     if data.get('roof_drainage') == 'Internal Drains':
         add_sub_bullet(doc, "Roof drainage system will be designed as internal roof drains with secondary overflows.")
-    else:
+    elif data.get('roof_drainage') == 'Gutters/Downspouts':
         add_sub_bullet(doc, "Roof drainage system will be designed as gutter and downspouts exterior to the building.")
     
     if data.get('civil_coordination'):
         add_sub_bullet(doc, "Coordination with the civil engineer is anticipated in the scope of services.")
     
-    # === ELECTRICAL DESIGN BASIS ===
-    add_section_header(doc, "Electrical Design Basis")
-    p = doc.add_paragraph()
-    p.add_run("The electrical design shall be based on the following:")
+    # Electrical Design Basis
+    doc.add_paragraph()  # Blank line
+    add_bullet(doc, "The electrical design shall be based on the following:")
     
     if data.get('existing_electrical_renovation'):
         add_bullet(doc, "The existing electrical system is being renovated and anticipated to exceed the loads currently in the space and therefore a 30-day load study, provided by the Client, will be required prior to issuing final construction documents.")
@@ -541,10 +513,9 @@ def create_proposal_document(data):
     if data.get('technology_design'):
         add_bullet(doc, "Technology design services provided in the MEP design scope of services below will have the design for the pathway and backboxes only.")
     
-    # === FIRE PROTECTION DESIGN BASIS ===
-    add_section_header(doc, "Fire Protection Design Basis")
-    p = doc.add_paragraph()
-    p.add_run("The Fire protection design shall be based on the following:")
+    # Fire Protection Design Basis
+    doc.add_paragraph()  # Blank line
+    add_bullet(doc, "The Fire protection design shall be based on the following:")
     
     add_sub_bullet(doc, "Fire protection design to consist of schematic plans and \"performance-based\" (FAC 61G15) specifications. Detailed fire sprinkler drawings shall be provided by the Client's fire sprinkler contractor.")
     add_sub_bullet(doc, "The Client's fire sprinkler contractor shall be responsible for fire sprinkler permit documents.")
@@ -554,30 +525,35 @@ def create_proposal_document(data):
     else:
         add_sub_bullet(doc, "The design of a fire pump is not included in this scope of services.")
     
-    # === MEETINGS & REVIT ===
+    # Weekly Meetings
     if data.get('weekly_meetings'):
-        p = doc.add_paragraph()
-        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-        p.add_run("For budgeting purposes, Kimley-Horn assumes that weekly meetings will occur throughout each design phase task provided below beginning with the kickoff meeting and in accordance with the duration of each design phase task outlined below in the scope of services. Should the design schedule be extended beyond its initially established timeframe, attendance at any additional meetings may be considered an additional service and subject to additional charges.")
+        doc.add_paragraph()  # Blank line
+        meeting_text = "For budgeting purposes, Kimley-Horn assumes that weekly meetings will occur throughout each design phase task provided below beginning with the kickoff meeting and in accordance with the duration of each design phase task outlined below in the scope of services. Should the design schedule be extended beyond its initially established timeframe, attendance at any additional meetings may be considered an additional service and subject to additional charges."
+        add_bullet(doc, meeting_text)
     
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    p.add_run(f"Revit: Kimley-Horn utilizes Revit as the basis for Kimley-Horn's design software. Kimley-Horn's Revit model will be prepared to a Level of Development (LOD) {data.get('revit_lod', '300')} standard which will consist of the following:")
+    # Revit
+    doc.add_paragraph()  # Blank line
+    revit_intro = f"Revit: Kimley-Horn utilizes Revit as the basis for Kimley-Horn's design software. Kimley-Horn's Revit model will be prepared to a Level of Development (LOD) {data.get('revit_lod', '300')} standard which will consist of the following:"
+    add_bullet(doc, revit_intro)
     
-    add_bullet(doc, "Model elements represented for all ductwork, piping, conduits (6\" or greater), duct banks, panel boards, mechanical and plumbing equipment, fire protection equipment. Refrigerant piping will be modeled for the intent of routing purposes only.")
-    add_bullet(doc, "Interdisciplinary coordination with MEPFP systems in the building to address major coordination items such as chases, above ceiling heights, coordination with structural members and foundations. Though major coordination will be done, the model will not be clash free. Any elements under 6\" in diameter or depth will be modeled for design intent only and will be left up to the Client's contractor for all final coordination.")
-    add_bullet(doc, "All lighting and plumbing fixtures will be placed and controlled by the Client's architect in their model and referenced and modeled in the Kimley-Horn Revit model.")
+    add_sub_bullet(doc, "Model elements represented for all ductwork, piping, conduits (6\" or greater), duct banks, panel boards, mechanical and plumbing equipment, fire protection equipment. Refrigerant piping will be modeled for the intent of routing purposes only.")
+    add_sub_bullet(doc, "Interdisciplinary coordination with MEPFP systems in the building to address major coordination items such as chases, above ceiling heights, coordination with structural members and foundations. Though major coordination will be done, the model will not be clash free. Any elements under 6\" in diameter or depth will be modeled for design intent only and will be left up to the Client's contractor for all final coordination.")
+    add_sub_bullet(doc, "All lighting and plumbing fixtures will be placed and controlled by the Client's architect in their model and referenced and modeled in the Kimley-Horn Revit model.")
     
     if data.get('revit_coordination_hours'):
-        add_bullet(doc, f"Meeting with Client's architect and Client's other subconsultants will be for coordination only (Kimley-Horn will attend up to {data['revit_coordination_hours']} hrs for meetings). Clash detection meetings are not part of this scope of services and can be provided as an additional service.")
+        add_sub_bullet(doc, f"Meeting with Client's architect and Client's other subconsultants will be for coordination only (Kimley-Horn will attend up to {data['revit_coordination_hours']} hrs for meetings). Clash detection meetings are not part of this scope of services and can be provided as an additional service.")
     
     # === SCOPE OF SERVICES ===
+    doc.add_paragraph()  # Blank line
     add_section_header(doc, "Scope of Services")
     
-    # Task 110
+    # Task 110 - Schematic Design
     p = doc.add_paragraph()
     run = p.add_run("Task 110 – Schematic Design")
     run.bold = True
+    run.font.name = 'Arial'
+    run.font.size = Pt(11)
+    doc.add_paragraph()  # Blank line
     
     add_bullet(doc, "Attend one (1) Client and / or architect kickoff meeting for project initiation.")
     
@@ -602,10 +578,14 @@ def create_proposal_document(data):
     add_bullet(doc, "Prepare Schematic Design narratives describing the proposed MEP/FP systems.")
     add_bullet(doc, "Respond to up to two (2) rounds of schematic design narrative comments from Client.")
     
-    # Task 120
+    # Task 120 - Design Development
+    doc.add_paragraph()  # Blank line
     p = doc.add_paragraph()
     run = p.add_run("Task 120 – Design Development")
     run.bold = True
+    run.font.name = 'Arial'
+    run.font.size = Pt(11)
+    doc.add_paragraph()  # Blank line
     
     add_bullet(doc, "Upon written approval of the Schematic Design narrative by the Client, Kimley-Horn will proceed into the Design Development phase.")
     
@@ -622,10 +602,14 @@ def create_proposal_document(data):
     add_bullet(doc, "Prepare and deliver Design Development drawings in PDF format.")
     add_bullet(doc, f"Respond to up to {data.get('dd_rounds', '2')} rounds of owner Design Development (DD) review comments.")
     
-    # Task 130
+    # Task 130 - Construction Documents
+    doc.add_paragraph()  # Blank line
     p = doc.add_paragraph()
     run = p.add_run("Task 130 – Construction Documents")
     run.bold = True
+    run.font.name = 'Arial'
+    run.font.size = Pt(11)
+    doc.add_paragraph()  # Blank line
     
     add_bullet(doc, "Upon written approval of the Design Development deliverables by the Client, Kimley-Horn will proceed into the Construction Document phase.")
     
@@ -647,21 +631,30 @@ def create_proposal_document(data):
     add_bullet(doc, "Specifications will be prepared as standard book specs or sheet specs.")
     add_bullet(doc, "Submit stamped and signed PDF drawings and specifications for building permit application and final building permit coordination. All municipal permit coordination is to be handled by the Client's project architect.")
     
-    # Task 140
+    # Task 140 - Bidding
+    doc.add_paragraph()  # Blank line
     p = doc.add_paragraph()
     run = p.add_run("Task 140 – Bidding and Negotiations")
     run.bold = True
+    run.font.name = 'Arial'
+    run.font.size = Pt(11)
+    doc.add_paragraph()  # Blank line
     
     add_bullet(doc, "Kimley-Horn will attend up to one (1) pre-bid meeting with potential bidders online or in person as requested by the Client.")
     add_bullet(doc, "Consultant will review up to two (2) rounds of sub-contractor bids and provide written feedback to Client on received bids.")
     
-    # Task 150
+    # Task 150 - Construction Phase
+    doc.add_paragraph()  # Blank line
     p = doc.add_paragraph()
     run = p.add_run("Task 150 – Limited Construction Phase Services")
     run.bold = True
+    run.font.name = 'Arial'
+    run.font.size = Pt(11)
+    doc.add_paragraph()  # Blank line
     
     if data.get('site_visits'):
-        add_bullet(doc, f"Site Visits and Construction Observation. Kimley-Horn will make up to {data['site_visits']} site visits to observe the progress of the work. Observations will not be exhaustive or extend to every aspect of Contractor's work, but will be limited to spot checking, and similar methods of general observation.")
+        site_visit_text = f"Site Visits and Construction Observation. Kimley-Horn will make up to {data['site_visits']} site visits to observe the progress of the work. Observations will not be exhaustive or extend to every aspect of Contractor's work, but will be limited to spot checking, and similar methods of general observation."
+        add_bullet(doc, site_visit_text)
     
     add_bullet(doc, "Kimley-Horn will not supervise, direct, or control Contractor's work, and will not have authority to stop the Work or responsibility for the means, methods, techniques, equipment choice and use, schedules, or procedures of construction selected by Contractor.")
     add_bullet(doc, "Kimley-Horn is not responsible for any duties assigned to it in the construction contract that are not expressly provided for in this Agreement.")
@@ -669,25 +662,30 @@ def create_proposal_document(data):
     add_bullet(doc, "Substitutes and \"or-equal/equivalent.\" Kimley-Horn will evaluate the acceptability of substitute or \"or-equal/equivalent\" materials and equipment proposed by Contractor in accordance with the Contract Documents.")
     add_bullet(doc, "Kimley-Horn will respond to RFIs and Submittals within a reasonable amount of time, but not more than five (5) business days for RFIs and ten (10) business days for submittals.")
     
-    # Task 160 (optional)
+    # Task 160 - Record Drawings (optional)
     if data.get('include_record_drawings'):
+        doc.add_paragraph()  # Blank line
         p = doc.add_paragraph()
         run = p.add_run("Task 160 – Record Drawings")
         run.bold = True
+        run.font.name = 'Arial'
+        run.font.size = Pt(11)
+        doc.add_paragraph()  # Blank line
         
-        p = doc.add_paragraph()
-        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-        p.add_run("Kimley-Horn will prepare a record drawing showing significant changes reported by the Contractor or made to the design by Kimley-Horn. Record drawings are not guaranteed to be as-built but will be based on information made available.")
+        record_text = "Kimley-Horn will prepare a record drawing showing significant changes reported by the Contractor or made to the design by Kimley-Horn. Record drawings are not guaranteed to be as-built but will be based on information made available."
+        add_paragraph(doc, record_text, justify=True)
+        doc.add_paragraph()  # Blank line
         
         if data.get('record_drawings_hours'):
             add_bullet(doc, f"Given the unknown quantity of revisions, Kimley-Horn has allocated {data['record_drawings_hours']} hours for coordination and responses in this task. Additional responses may require additional fee.")
     
     # === ADDITIONAL SERVICES ===
+    doc.add_paragraph()  # Blank line
     add_section_header(doc, "Additional Services")
     
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    p.add_run("Any services not specifically provided for in the above scope of services will be billed as additional services and performed at our then current hourly rates. Additional services we can provide include, but are not limited to, the following:")
+    additional_intro = "Any services not specifically provided for in the above scope of services will be billed as additional services and performed at our then current hourly rates. Additional services we can provide include, but are not limited to, the following:"
+    add_paragraph(doc, additional_intro, justify=True)
+    doc.add_paragraph()  # Blank line
     
     additional_services = [
         "Commissioning Services.",
@@ -711,11 +709,12 @@ def create_proposal_document(data):
         add_bullet(doc, service)
     
     # === INFORMATION PROVIDED BY CLIENT ===
+    doc.add_paragraph()  # Blank line
     add_section_header(doc, "Information Provided by Client")
     
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    p.add_run("Kimley-Horn shall be entitled to rely on the completeness and accuracy of all information provided by the Client or the Client's consultants or representatives. The Client shall provide all information requested by Kimley-Horn during the project, including but not limited to the following:")
+    client_intro = "Kimley-Horn shall be entitled to rely on the completeness and accuracy of all information provided by the Client or the Client's consultants or representatives. The Client shall provide all information requested by Kimley-Horn during the project, including but not limited to the following:"
+    add_paragraph(doc, client_intro, justify=True)
+    doc.add_paragraph()  # Blank line
     
     client_info_items = [
         "Architectural floor plan, site plans, life safety plans, elevations, building sections, reflected ceiling plans and architectural floor plan backgrounds, complete with room names, numbers and rated or special wall construction, will be provided by the Client's architect during the course of the design (Kimley-Horn standard is Revit).",
@@ -731,20 +730,21 @@ def create_proposal_document(data):
         add_bullet(doc, item)
     
     # === SCHEDULE ===
+    doc.add_paragraph()  # Blank line
     add_section_header(doc, "Schedule")
     
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    p.add_run("Kimley-Horn will perform the services as expeditiously as practicable with the goal of meeting a mutually agreed upon schedule.")
+    schedule_text = "Kimley-Horn will perform the services as expeditiously as practicable with the goal of meeting a mutually agreed upon schedule."
+    add_paragraph(doc, schedule_text, justify=True)
     
     # === FEE AND EXPENSES ===
+    doc.add_paragraph()  # Blank line
     add_section_header(doc, "Fee and Expenses")
     
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    p.add_run("Kimley-Horn will perform the services in Tasks 110 – 150 for the total lump sum labor fee below. Individual task amounts are informational only. In addition to the lump sum labor fee, direct reimbursable expenses such as express delivery services, fees, air travel, and other direct expenses will be billed at 1.15 times cost. All permitting, application, and similar project fees will be paid directly by the Client.")
+    fee_intro = "Kimley-Horn will perform the services in Tasks 110 – 150 for the total lump sum labor fee below. Individual task amounts are informational only. In addition to the lump sum labor fee, direct reimbursable expenses such as express delivery services, fees, air travel, and other direct expenses will be billed at 1.15 times cost. All permitting, application, and similar project fees will be paid directly by the Client."
+    add_paragraph(doc, fee_intro, justify=True)
+    doc.add_paragraph()  # Blank line
     
-    # Create fee table
+    # Fee table
     num_rows = 7 if not data.get('include_record_drawings') else 8
     fee_table = doc.add_table(rows=num_rows, cols=3)
     fee_table.style = 'Table Grid'
@@ -756,7 +756,6 @@ def create_proposal_document(data):
     header_cells[1].text = "Fee"
     header_cells[2].text = "Type"
     
-    # Style header
     for cell in header_cells:
         cell_shading = OxmlElement('w:shd')
         cell_shading.set(qn('w:fill'), '8B0000')
@@ -766,6 +765,7 @@ def create_proposal_document(data):
                 run.font.bold = True
                 run.font.color.rgb = RGBColor(255, 255, 255)
                 run.font.size = Pt(10)
+                run.font.name = 'Arial'
     
     # Data rows
     fee_data = [
@@ -784,11 +784,15 @@ def create_proposal_document(data):
         row.cells[0].text = task
         row.cells[1].text = f"${fee}"
         row.cells[2].text = fee_type
+        for cell in row.cells:
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                    run.font.name = 'Arial'
+                    run.font.size = Pt(11)
     
     # Total row
     total = calculate_total(data)
-    total_row_idx = num_rows - 1
-    total_row = fee_table.rows[total_row_idx]
+    total_row = fee_table.rows[num_rows - 1]
     total_row.cells[0].text = "Total"
     total_row.cells[1].text = f"${total}"
     total_row.cells[2].text = ""
@@ -796,35 +800,37 @@ def create_proposal_document(data):
         for paragraph in cell.paragraphs:
             for run in paragraph.runs:
                 run.font.bold = True
+                run.font.name = 'Arial'
+                run.font.size = Pt(11)
     
-    p = doc.add_paragraph()
-    p.add_run("")
+    doc.add_paragraph()  # Blank line
     
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    p.add_run("Lump sum fees will be invoiced monthly based upon the overall percentage of services performed. Reimbursable expenses will be invoiced based upon expenses incurred.")
+    fee_text1 = "Lump sum fees will be invoiced monthly based upon the overall percentage of services performed. Reimbursable expenses will be invoiced based upon expenses incurred."
+    add_paragraph(doc, fee_text1, justify=True)
+    doc.add_paragraph()  # Blank line
     
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    p.add_run("Payment will be due within 25 days of your receipt of the invoice and should include the invoice number and Kimley-Horn project number.")
+    fee_text2 = "Payment will be due within 25 days of your receipt of the invoice and should include the invoice number and Kimley-Horn project number."
+    add_paragraph(doc, fee_text2, justify=True)
+    doc.add_paragraph()  # Blank line
     
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    p.add_run("This scope of services and associated fee are predicated on the assumption that no significant architectural design changes will occur following the Final Design Development (DD) stage. Should any substantial architectural design modifications be requested after the Final DD deliverable, additional design fees will be required to address and incorporate such changes.")
+    fee_text3 = "This scope of services and associated fee are predicated on the assumption that no significant architectural design changes will occur following the Final Design Development (DD) stage. Should any substantial architectural design modifications be requested after the Final DD deliverable, additional design fees will be required to address and incorporate such changes."
+    add_paragraph(doc, fee_text3, justify=True)
     
     # === CLOSURE ===
+    doc.add_paragraph()  # Blank line
     add_section_header(doc, "Closure")
     
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    run = p.add_run("In addition to the matters set forth herein, our Agreement shall include and be subject to, and only to, the attached Standard Provisions, which are incorporated by reference. As used in the Standard Provisions, \"Kimley-Horn\" shall refer to Kimley-Horn and Associates, Inc., and \"Client\" shall refer to ")
+    run1 = p.add_run("In addition to the matters set forth herein, our Agreement shall include and be subject to, and only to, the attached Standard Provisions, which are incorporated by reference. As used in the Standard Provisions, \"Kimley-Horn\" shall refer to Kimley-Horn and Associates, Inc., and \"Client\" shall refer to ")
     run2 = p.add_run(data['company_name'] or "___Insert Client's Legal Entity Name___")
     run2.font.highlight_color = 7
     p.add_run(".")
+    doc.add_paragraph()  # Blank line
     
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    p.add_run("Kimley-Horn, in an effort to expedite invoices and reduce paper waste, submits invoices via email in a PDF. We can also provide a paper copy via regular mail if requested. Please include the invoice number and Kimley-Horn project number with all payments. Please provide the following information:")
+    invoice_text = "Kimley-Horn, in an effort to expedite invoices and reduce paper waste, submits invoices via email in a PDF. We can also provide a paper copy via regular mail if requested. Please include the invoice number and Kimley-Horn project number with all payments. Please provide the following information:"
+    add_paragraph(doc, invoice_text, justify=True)
+    doc.add_paragraph()  # Blank line
     
     p = doc.add_paragraph()
     p.paragraph_format.left_indent = Inches(0.5)
@@ -833,73 +839,82 @@ def create_proposal_document(data):
     p = doc.add_paragraph()
     p.paragraph_format.left_indent = Inches(0.5)
     p.add_run(f"____ Please copy {data.get('invoice_copy', '_______________________________________')}")
+    doc.add_paragraph()  # Blank line
+    
+    proceed_text = "To proceed with the services, please have an authorized person sign this Agreement below and return to us. We will commence services only after we have received a fully-executed agreement. Fees and times stated in this Agreement are valid for sixty (60) days after the date of this letter."
+    add_paragraph(doc, proceed_text, justify=True)
+    doc.add_paragraph()  # Blank line
+    
+    rfi_text = "To ensure proper set up of your projects so that we can get started, please complete and return with the signed copy of this Agreement the attached Request for Information. Failure to supply this information could result in delay in starting work on this project."
+    add_paragraph(doc, rfi_text, justify=True)
+    doc.add_paragraph()  # Blank line
+    
+    add_paragraph(doc, "We appreciate the opportunity to provide these services. Please contact me if you have any questions.")
+    doc.add_paragraph()  # Blank line
     
     p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    p.add_run("To proceed with the services, please have an authorized person sign this Agreement below and return to us. We will commence services only after we have received a fully-executed agreement. Fees and times stated in this Agreement are valid for sixty (60) days after the date of this letter.")
-    
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    p.add_run("To ensure proper set up of your projects so that we can get started, please complete and return with the signed copy of this Agreement the attached Request for Information. Failure to supply this information could result in delay in starting work on this project.")
-    
-    p = doc.add_paragraph()
-    p.add_run("We appreciate the opportunity to provide these services. Please contact me if you have any questions.")
-    
-    p = doc.add_paragraph()
-    p.paragraph_format.space_before = Pt(30)
+    p.paragraph_format.space_before = Pt(12)
     p.add_run("Sincerely,")
+    doc.add_paragraph()  # Blank line
+    doc.add_paragraph()  # Blank line
     
     p = doc.add_paragraph()
-    p.paragraph_format.space_before = Pt(30)
     run = p.add_run("KIMLEY-HORN AND ASSOCIATES, INC.")
     run.bold = True
+    run.font.name = 'Arial'
+    doc.add_paragraph()  # Blank line
+    doc.add_paragraph()  # Blank line
     
     # Signature table
-    sig_table = doc.add_table(rows=2, cols=2)
-    sig_table.rows[0].cells[0].text = ""
-    sig_table.rows[0].cells[1].text = ""
-    sig_table.rows[1].cells[0].text = f"{data.get('project_manager', 'Clayton Scelzi')}\nProject Manager"
-    sig_table.rows[1].cells[1].text = f"{data.get('senior_vp', 'Scott W. Gilner, PE')}\nSenior Vice President"
+    sig_table = doc.add_table(rows=1, cols=2)
+    sig_table.autofit = False
+    sig_table.columns[0].width = Inches(3.0)
+    sig_table.columns[1].width = Inches(3.0)
+    
+    sig_table.rows[0].cells[0].text = f"{data.get('project_manager', 'Clayton Scelzi')}\nProject Manager"
+    sig_table.rows[0].cells[1].text = f"{data.get('senior_vp', 'Scott W. Gilner, PE')}\nSenior Vice President"
+    
+    for cell in sig_table.rows[0].cells:
+        for paragraph in cell.paragraphs:
+            for run in paragraph.runs:
+                run.font.name = 'Arial'
+                run.font.size = Pt(11)
     
     # === CLIENT SIGNATURE PAGE ===
     doc.add_page_break()
     
-    p = doc.add_paragraph()
-    p.add_run("If the recipient changes the legal entity name or signs as any name other than the client named in the opening address block, do not accept this and prepare a new Letter Agreement with the appropriate client identified after discussion with the client.")
+    signature_instructions = "If the recipient changes the legal entity name or signs as any name other than the client named in the opening address block, do not accept this and prepare a new Letter Agreement with the appropriate client identified after discussion with the client."
+    add_paragraph(doc, signature_instructions)
+    doc.add_paragraph()  # Blank line
     
     p = doc.add_paragraph()
-    p.paragraph_format.space_before = Pt(20)
+    p.paragraph_format.space_before = Pt(12)
     run = p.add_run("CORRECT CLIENT ENTITY – ALL CAPS – CHECK SUNBIZ.")
     run.bold = True
+    run.font.name = 'Arial'
+    doc.add_paragraph()  # Blank line
+    doc.add_paragraph()  # Blank line
     
-    p = doc.add_paragraph()
-    p.paragraph_format.space_before = Pt(30)
-    p.add_run("SIGNED: _________________________________")
+    add_paragraph(doc, "SIGNED: _________________________________")
+    doc.add_paragraph()  # Blank line
+    add_paragraph(doc, "PRINTED NAME: _________________________________")
+    doc.add_paragraph()  # Blank line
+    add_paragraph(doc, "TITLE: _________________________________")
+    doc.add_paragraph()  # Blank line
+    add_paragraph(doc, "DATE: _________________________________")
+    doc.add_paragraph()  # Blank line
+    doc.add_paragraph()  # Blank line
     
-    p = doc.add_paragraph()
-    p.add_run("PRINTED NAME: _________________________________")
+    add_paragraph(doc, "Client's Federal Tax ID: _________________________________")
+    doc.add_paragraph()  # Blank line
+    add_paragraph(doc, "Client's Business License No.: _________________________________")
+    doc.add_paragraph()  # Blank line
+    add_paragraph(doc, "Client's Street Address: _________________________________")
+    doc.add_paragraph()  # Blank line
+    doc.add_paragraph()  # Blank line
     
-    p = doc.add_paragraph()
-    p.add_run("TITLE: _________________________________")
-    
-    p = doc.add_paragraph()
-    p.add_run("DATE: _________________________________")
-    
-    p = doc.add_paragraph()
-    p.paragraph_format.space_before = Pt(30)
-    p.add_run("Client's Federal Tax ID: _________________________________")
-    
-    p = doc.add_paragraph()
-    p.add_run("Client's Business License No.: _________________________________")
-    
-    p = doc.add_paragraph()
-    p.add_run("Client's Street Address: _________________________________")
-    
-    p = doc.add_paragraph()
-    p.paragraph_format.space_before = Pt(20)
-    p.add_run("Attachment – Request for Information")
-    p = doc.add_paragraph()
-    p.add_run("Attachment – Standard Provisions")
+    add_paragraph(doc, "Attachment – Request for Information")
+    add_paragraph(doc, "Attachment – Standard Provisions")
     
     return doc
 
@@ -954,7 +969,7 @@ with tab1:
 
 with tab2:
     st.subheader("Project Understanding & Assumptions")
-    st.info("✅ Select all applicable items. These will appear in the 'Project Understanding' section.")
+    st.info("✅ Select all applicable items for the Project Understanding section.")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -1002,7 +1017,7 @@ with tab3:
             "Rooftop Units without VAV",
             "VRF",
             "Split DX"
-        ], help="Select the main heating/cooling system type")
+        ])
         
         hvac_residential_highrise = st.checkbox("Residential Highrise (system TBD)")
         hvac_existing_reuse = st.checkbox("Reuse Existing Mechanical System")
@@ -1062,10 +1077,8 @@ with tab3:
         st.markdown("---")
         st.subheader("🏗️ Revit Standards")
         weekly_meetings = st.checkbox("Weekly Meetings", value=True)
-        revit_lod = st.selectbox("Revit LOD", ["200", "300", "350", "400"], index=1,
-                                help="Level of Development for BIM model")
-        revit_coordination_hours = st.text_input("Revit Coordination Hours", 
-                                                placeholder="Optional")
+        revit_lod = st.selectbox("Revit LOD", ["200", "300", "350", "400"], index=1)
+        revit_coordination_hours = st.text_input("Revit Coordination Hours", placeholder="Optional")
 
 with tab4:
     st.subheader("Design Phase Schedule")
@@ -1177,10 +1190,9 @@ with tab5:
 with tab6:
     st.subheader("Generate Proposal Document")
     
-    # Use native Streamlit components instead of HTML for better visibility
     st.info("📄 **Ready to Generate Your Proposal?**\n\nReview your inputs in the other tabs, then click below to generate your professional Word document with proper headers and footers on every page.")
     
-    # Validation check before generation
+    # Validation check
     required_fields = {
         'Client Contact': client_contact,
         'Company Name': company_name,
@@ -1328,8 +1340,8 @@ with tab6:
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #666; font-size: 12px; padding: 20px;">
-    <strong>MEP Proposal Generator v2.1</strong> | Kimley-Horn Engineering Services<br>
-    Footer appears on every page of generated document (8pt font)<br>
+    <strong>MEP Proposal Generator v3.0</strong> | Kimley-Horn Engineering Services<br>
+    Complete Template Implementation with Exact Formatting<br>
     <em>For support, contact your IT administrator</em>
 </div>
 """, unsafe_allow_html=True)
