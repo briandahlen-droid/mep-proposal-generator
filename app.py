@@ -22,7 +22,7 @@ import base64
 # Hardcoded Kimley-Horn logo (base64 encoded)
 # This will be embedded directly in every document
 KIMLEY_HORN_LOGO_BASE64 = """
-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
+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
 """
 
 def get_logo_from_base64():
@@ -167,12 +167,12 @@ def add_text_logo(paragraph):
 
 
 def add_footer(section, text_left, text_center, text_right):
-    """Add colored footer with exact specs: Col1=1.1", Col2=4.23", Col3=0.96", Height=0.22", with white gaps between"""
+    """Add colored footer with exact specs: Col1=1.1", Col2=4.23", Col3=0.96", Height=0.22", with 0.01" white gaps"""
     footer = section.footer
     footer.is_linked_to_previous = False
     
-    # Create table with 5 columns (3 content + 2 white gaps)
-    gap_width = Inches(0.05)
+    # Create table with 5 columns (3 content + 2 white gaps of 0.01" each)
+    gap_width = Inches(0.01)  # Tiny white space between colored sections
     total_width = Inches(1.1) + gap_width + Inches(4.23) + gap_width + Inches(0.96)
     
     table = footer.add_table(rows=1, cols=5, width=total_width)
@@ -181,9 +181,9 @@ def add_footer(section, text_left, text_center, text_right):
     
     # Set exact column widths
     table.columns[0].width = Inches(1.1)      # Grey section
-    table.columns[1].width = gap_width        # White gap
+    table.columns[1].width = gap_width        # White gap (0.01")
     table.columns[2].width = Inches(4.23)     # Red/mauve section (address)
-    table.columns[3].width = gap_width        # White gap
+    table.columns[3].width = gap_width        # White gap (0.01")
     table.columns[4].width = Inches(0.96)     # Red/mauve section (phone)
     
     cells = table.rows[0].cells
