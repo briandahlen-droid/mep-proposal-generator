@@ -61,36 +61,36 @@ def add_footer(section, text_left, text_center, text_right):
     footer = section.footer
     footer.is_linked_to_previous = False
     
-    # Create table for footer
-    table = footer.add_table(rows=1, cols=3, width=Inches(6.5))
+    # Create table for footer - make wider to fit address on one line
+    table = footer.add_table(rows=1, cols=3, width=Inches(7.0))
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     table.autofit = False
     
-    # Set column widths - sized to fit text exactly
-    table.columns[0].width = Inches(1.15)   # kimley-horn.com
-    table.columns[1].width = Inches(4.35)   # full address on one line
-    table.columns[2].width = Inches(1.0)    # phone number
+    # Set column widths - center must be wide enough for full address
+    table.columns[0].width = Inches(1.0)    # kimley-horn.com
+    table.columns[1].width = Inches(5.15)   # full address - ONE LINE
+    table.columns[2].width = Inches(0.85)   # phone number
     
     # Style cells
     cells = table.rows[0].cells
     
-    # Colors from Kimley-Horn brand
-    grey_fill = 'C7C8CA'      # Grey for left cell
-    salmon_fill = 'A20C33'    # Salmon for middle and right cells
+    # Kimley-Horn brand colors
+    grey_fill = '404041'      # Grey-90 for left cell
+    red_fill = 'A20C33'       # PMS 201C for middle and right cells
     
-    # Helper to set cell margins for tight fit
+    # Helper to set minimal cell margins
     def set_cell_margins(cell):
         tc = cell._tc
         tcPr = tc.get_or_add_tcPr()
         tcMar = OxmlElement('w:tcMar')
         for margin_name in ['top', 'bottom']:
             margin = OxmlElement(f'w:{margin_name}')
-            margin.set(qn('w:w'), '30')
+            margin.set(qn('w:w'), '20')
             margin.set(qn('w:type'), 'dxa')
             tcMar.append(margin)
         for margin_name in ['left', 'right']:
             margin = OxmlElement(f'w:{margin_name}')
-            margin.set(qn('w:w'), '60')
+            margin.set(qn('w:w'), '40')
             margin.set(qn('w:type'), 'dxa')
             tcMar.append(margin)
         tcPr.append(tcMar)
@@ -110,10 +110,10 @@ def add_footer(section, text_left, text_center, text_right):
             run.font.color.rgb = RGBColor(255, 255, 255)
             run.font.name = 'Arial'
     
-    # Center cell - salmon background
+    # Center cell - red background
     cells[1].text = text_center
     cell_shading = OxmlElement('w:shd')
-    cell_shading.set(qn('w:fill'), salmon_fill)
+    cell_shading.set(qn('w:fill'), red_fill)
     cells[1]._tc.get_or_add_tcPr().append(cell_shading)
     set_cell_margins(cells[1])
     for paragraph in cells[1].paragraphs:
@@ -125,10 +125,10 @@ def add_footer(section, text_left, text_center, text_right):
             run.font.color.rgb = RGBColor(255, 255, 255)
             run.font.name = 'Arial'
     
-    # Right cell - salmon background
+    # Right cell - red background
     cells[2].text = text_right
     cell_shading = OxmlElement('w:shd')
-    cell_shading.set(qn('w:fill'), salmon_fill)
+    cell_shading.set(qn('w:fill'), red_fill)
     cells[2]._tc.get_or_add_tcPr().append(cell_shading)
     set_cell_margins(cells[2])
     for paragraph in cells[2].paragraphs:
