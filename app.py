@@ -61,15 +61,15 @@ def add_footer(section, text_left, text_center, text_right):
     footer = section.footer
     footer.is_linked_to_previous = False
     
-    # Create table for footer - full page width
-    table = footer.add_table(rows=1, cols=3, width=Inches(7.5))
+    # Create table for footer - match document margins (6.5" for 1" margins on letter)
+    table = footer.add_table(rows=1, cols=3, width=Inches(6.5))
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     table.autofit = False
     
-    # Set column widths - center much wider for one-line address
-    table.columns[0].width = Inches(1.0)   # kimley-horn.com
-    table.columns[1].width = Inches(5.5)   # address (much wider)
-    table.columns[2].width = Inches(1.0)   # phone
+    # Set column widths - center widest for one-line address, sides minimal
+    table.columns[0].width = Inches(1.0)   # kimley-horn.com (minimal)
+    table.columns[1].width = Inches(4.6)   # address (wide for one line)
+    table.columns[2].width = Inches(0.9)   # phone (minimal)
     
     # Style cells
     cells = table.rows[0].cells
@@ -97,12 +97,12 @@ def add_footer(section, text_left, text_center, text_right):
         tcMar = OxmlElement('w:tcMar')
         for margin_name in ['top', 'bottom']:
             margin = OxmlElement(f'w:{margin_name}')
-            margin.set(qn('w:w'), '15')  # very minimal top/bottom
+            margin.set(qn('w:w'), '20')  # minimal top/bottom
             margin.set(qn('w:type'), 'dxa')
             tcMar.append(margin)
         for margin_name in ['left', 'right']:
             margin = OxmlElement(f'w:{margin_name}')
-            margin.set(qn('w:w'), '40')  # small left/right
+            margin.set(qn('w:w'), '50')  # small left/right
             margin.set(qn('w:type'), 'dxa')
             tcMar.append(margin)
         tcPr.append(tcMar)
