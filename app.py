@@ -103,10 +103,10 @@ def format_currency(value):
 
 def setup_styles(doc):
     """Setup proper Word styles for the document"""
-    # Normal style - 11pt Arial to match template
+    # Normal style - 10pt Arial to match template
     normal = doc.styles['Normal']
     normal.font.name = 'Arial'
-    normal.font.size = Pt(11)
+    normal.font.size = Pt(10)
     normal.paragraph_format.space_after = Pt(0)
     normal.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
     
@@ -118,14 +118,14 @@ def setup_styles(doc):
     
     bullet_style.base_style = doc.styles['Normal']
     bullet_style.font.name = 'Arial'
-    bullet_style.font.size = Pt(11)
+    bullet_style.font.size = Pt(10)
     bullet_style.paragraph_format.left_indent = Inches(0.25)
     bullet_style.paragraph_format.space_after = Pt(0)
     bullet_style.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
 
 
-def add_header_with_logo(section):
-    """Add header with hardcoded Kimley-Horn logo image"""
+def add_header_with_logo(section, page_num=1):
+    """Add header with hardcoded Kimley-Horn logo and page number"""
     header = section.header
     header.is_linked_to_previous = False
     
@@ -144,27 +144,38 @@ def add_header_with_logo(section):
     else:
         # Fallback to text logo
         add_text_logo(p)
+    
+    # Add page number on right side - 11pt Arial, right justified
+    if page_num:
+        # Add tab stop for right alignment at right margin
+        tab_stops = p.paragraph_format.tab_stops
+        tab_stops.add_tab_stop(Inches(6.5), WD_TAB_ALIGNMENT.RIGHT)
+        p.add_run("\t")
+        run_page = p.add_run(f"Page {page_num}")
+        run_page.font.size = Pt(11)
+        run_page.font.name = 'Arial'
+        run_page.font.bold = False
 
 
 def add_text_logo(paragraph):
-    """Add text-based logo as fallback"""
+    """Add text-based logo as fallback - Arial Narrow"""
     run1 = paragraph.add_run("Kimley")
     run1.font.size = Pt(28)
     run1.font.bold = False
     run1.font.color.rgb = RGBColor(88, 89, 91)
-    run1.font.name = 'Arial'
+    run1.font.name = 'Arial Narrow'
     
     run2 = paragraph.add_run("»")
     run2.font.size = Pt(28)
     run2.font.bold = False
     run2.font.color.rgb = RGBColor(88, 89, 91)
-    run2.font.name = 'Arial'
+    run2.font.name = 'Arial Narrow'
     
     run3 = paragraph.add_run("Horn")
     run3.font.size = Pt(28)
     run3.font.bold = False
     run3.font.color.rgb = RGBColor(166, 25, 46)
-    run3.font.name = 'Arial'
+    run3.font.name = 'Arial Narrow'
 
 
 def add_footer(section, text_left, text_center, text_right):
@@ -279,7 +290,7 @@ def add_footer(section, text_left, text_center, text_right):
 
 
 def add_section_header(doc, text):
-    """Add bold and underlined section header - exact template format"""
+    """Add bold and underlined section header - 10pt to match body"""
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(12)
     p.paragraph_format.space_after = Pt(6)
@@ -287,7 +298,7 @@ def add_section_header(doc, text):
     run.bold = True
     run.underline = True
     run.font.name = 'Arial'
-    run.font.size = Pt(11)
+    run.font.size = Pt(10)
 
 
 def add_paragraph(doc, text, justify=False):
@@ -315,11 +326,17 @@ def add_bullet(doc, text):
 
 
 def add_sub_bullet(doc, text):
-    """Add a circle sub-bullet"""
+    """Add a circle sub-bullet with proper alignment and hanging indent"""
     p = doc.add_paragraph()
     p.paragraph_format.left_indent = Inches(0.5)
+    p.paragraph_format.first_line_indent = Inches(-0.15)  # Hanging indent
     p.paragraph_format.space_after = Pt(0)
-    p.add_run("○  " + text)
+    p.paragraph_format.space_before = Pt(0)
+    p.paragraph_format.line_spacing = 1.0
+    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    run = p.add_run("○  " + text)
+    run.font.name = 'Arial'
+    run.font.size = Pt(10)
     return p
 
 
