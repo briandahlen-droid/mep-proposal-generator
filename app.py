@@ -125,7 +125,7 @@ def setup_styles(doc):
 
 
 def add_header_with_logo(section, page_num=1):
-    """Add header with hardcoded Kimley-Horn logo and page number"""
+    """Add header with hardcoded Kimley-Horn logo and auto page number"""
     header = section.header
     header.is_linked_to_previous = False
     
@@ -145,16 +145,39 @@ def add_header_with_logo(section, page_num=1):
         # Fallback to text logo
         add_text_logo(p)
     
-    # Add page number on right side - 11pt Arial, right justified
-    if page_num:
-        # Add tab stop for right alignment at right margin
-        tab_stops = p.paragraph_format.tab_stops
-        tab_stops.add_tab_stop(Inches(6.5), WD_TAB_ALIGNMENT.RIGHT)
-        p.add_run("\t")
-        run_page = p.add_run(f"Page {page_num}")
-        run_page.font.size = Pt(11)
-        run_page.font.name = 'Arial'
-        run_page.font.bold = False
+    # Add page number on right side - 11pt Arial, right justified against margin
+    # Tab stop at 6.5" for right alignment
+    tab_stops = p.paragraph_format.tab_stops
+    tab_stops.add_tab_stop(Inches(6.5), WD_TAB_ALIGNMENT.RIGHT)
+    
+    # Add tab and page number field (auto-updates)
+    p.add_run("\t")
+    
+    # Create page number field that auto-updates
+    fldChar1 = OxmlElement('w:fldChar')
+    fldChar1.set(qn('w:fldCharType'), 'begin')
+    
+    instrText = OxmlElement('w:instrText')
+    instrText.set(qn('xml:space'), 'preserve')
+    instrText.text = 'PAGE'
+    
+    fldChar2 = OxmlElement('w:fldChar')
+    fldChar2.set(qn('w:fldCharType'), 'end')
+    
+    # Create run for page number
+    run_page = p.add_run()
+    run_page.font.size = Pt(11)
+    run_page.font.name = 'Arial'
+    run_page.font.bold = False
+    
+    # Insert field codes
+    run_page._r.append(fldChar1)
+    run_page._r.append(instrText)
+    run_page._r.append(fldChar2)
+    
+    # Add "Page " prefix before the field
+    p.runs[-2]._r.insert(0, OxmlElement('w:t'))
+    p.runs[-2]._r[0].text = 'Page '
 
 
 def add_text_logo(paragraph):
@@ -294,6 +317,7 @@ def add_section_header(doc, text):
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(12)
     p.paragraph_format.space_after = Pt(6)
+    p.paragraph_format.line_spacing = 1.0
     run = p.add_run(text)
     run.bold = True
     run.underline = True
@@ -302,7 +326,7 @@ def add_section_header(doc, text):
 
 
 def add_paragraph(doc, text, justify=False):
-    """Add a normal paragraph with proper spacing"""
+    """Add a normal paragraph with proper spacing and formatting"""
     p = doc.add_paragraph(text)
     p.paragraph_format.space_after = Pt(0)
     p.paragraph_format.space_before = Pt(0)
@@ -311,7 +335,7 @@ def add_paragraph(doc, text, justify=False):
         p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     for run in p.runs:
         run.font.name = 'Arial'
-        run.font.size = Pt(11)
+        run.font.size = Pt(10)
     return p
 
 
@@ -384,12 +408,16 @@ def create_proposal_document(data):
     
     # Add header with hardcoded logo and footer
     section = doc.sections[0]
-    add_header_with_logo(section)
+    add_header_with_logo(section, page_num=1)
     add_footer(section, "kimley-horn.com", 
                "200 Central Avenue Suite 600 St. Petersburg, FL 33701", 
                "727-547-3999")
     
     # === DOCUMENT CONTENT ===
+    
+    # Add 2 blank lines after header before date
+    doc.add_paragraph()  # First blank line
+    doc.add_paragraph()  # Second blank line
     
     # Date
     add_paragraph(doc, data['date'])
