@@ -1079,33 +1079,62 @@ with tab3:
     
     with col1:
         st.subheader("🌡️ HVAC System")
-        hvac_system = st.selectbox("Primary HVAC System", [
-            "Centralized Chilled Water",
-            "Condenser Water",
-            "Rooftop Units with VAV",
-            "Rooftop Units without VAV",
-            "VRF",
-            "Split DX"
-        ])
+        st.info("Select the primary HVAC system type")
+        hvac_centralized_chilled = st.checkbox("Centralized Chilled Water")
+        hvac_condenser = st.checkbox("Condenser Water")
+        hvac_rooftop_vav = st.checkbox("Rooftop Units with VAV")
+        hvac_rooftop_no_vav = st.checkbox("Rooftop Units without VAV")
+        hvac_vrf = st.checkbox("VRF")
+        hvac_split_dx = st.checkbox("Split DX")
         
+        # Determine which system is selected
+        hvac_systems = {
+            'Centralized Chilled Water': hvac_centralized_chilled,
+            'Condenser Water': hvac_condenser,
+            'Rooftop Units with VAV': hvac_rooftop_vav,
+            'Rooftop Units without VAV': hvac_rooftop_no_vav,
+            'VRF': hvac_vrf,
+            'Split DX': hvac_split_dx
+        }
+        hvac_system = next((k for k, v in hvac_systems.items() if v), 'Centralized Chilled Water')
+        
+        st.markdown("---")
         hvac_residential_highrise = st.checkbox("Residential Highrise (system TBD)")
         hvac_existing_reuse = st.checkbox("Reuse Existing Mechanical System")
         outside_air_unit = st.checkbox("Dedicated Outside Air Unit", value=True)
         
-        exhaust_system = st.selectbox("Exhaust System", [
-            "Dedicated Roof Fan",
-            "Individual Fans",
-            "Through OA Unit"
-        ])
+        st.markdown("**Exhaust System**")
+        exhaust_dedicated_roof = st.checkbox("Dedicated Roof Fan", value=True)
+        exhaust_individual = st.checkbox("Individual Fans")
+        exhaust_through_oa = st.checkbox("Through OA Unit")
         
-        parking_garage = st.selectbox("Parking Garage", ["Open-Air", "Enclosed"])
+        # Determine exhaust system
+        exhaust_systems = {
+            'Dedicated Roof Fan': exhaust_dedicated_roof,
+            'Individual Fans': exhaust_individual,
+            'Through OA Unit': exhaust_through_oa
+        }
+        exhaust_system = next((k for k, v in exhaust_systems.items() if v), 'Dedicated Roof Fan')
+        
+        st.markdown("**Parking Garage**")
+        parking_open_air = st.checkbox("Open-Air", value=True)
+        parking_enclosed = st.checkbox("Enclosed")
+        parking_garage = 'Open-Air' if parking_open_air else 'Enclosed'
+        
         smoke_control = st.checkbox("Smoke Control System")
         elevator_hoistway = st.checkbox("Elevator Hoistway (no pressurization)")
         
         st.markdown("---")
         st.subheader("🚿 Plumbing System")
-        water_service = st.selectbox("Water Service", ["Single Meter", "Multiple Meters"])
-        roof_drainage = st.selectbox("Roof Drainage", ["Internal Drains", "Gutters/Downspouts"])
+        st.markdown("**Water Service**")
+        water_single = st.checkbox("Single Meter", value=True)
+        water_multiple = st.checkbox("Multiple Meters")
+        water_service = 'Single Meter' if water_single else 'Multiple Meters'
+        
+        st.markdown("**Roof Drainage**")
+        roof_internal = st.checkbox("Internal Drains", value=True)
+        roof_gutters = st.checkbox("Gutters/Downspouts")
+        roof_drainage = 'Internal Drains' if roof_internal else 'Gutters/Downspouts'
         
         roof_storm_drain = st.checkbox("Roof Storm Drain (by Architect)", value=True)
         parking_garage_drain = st.checkbox("Parking Garage Drain")
@@ -1125,11 +1154,22 @@ with tab3:
         core_shell_electrical = st.checkbox("Core & Shell Electrical Only")
         lighting_coordination = st.checkbox("Lighting Design Coordination", value=True)
         
-        lightning_protection = st.selectbox("Lightning Protection", ["Excluded", "Included"])
-        emergency_generator = st.selectbox("Emergency Generator", ["Excluded", "Included"])
-        ev_charging = st.selectbox("EV Charging", ["Excluded", "Included"])
+        st.markdown("**Lightning Protection**")
+        lightning_excluded = st.checkbox("Excluded", value=True, key="lightning_excl")
+        lightning_included = st.checkbox("Included", key="lightning_incl")
+        lightning_protection = 'Included' if lightning_included else 'Excluded'
         
-        if ev_charging == "Included":
+        st.markdown("**Emergency Generator**")
+        generator_excluded = st.checkbox("Excluded", value=True, key="gen_excl")
+        generator_included = st.checkbox("Included", key="gen_incl")
+        emergency_generator = 'Included' if generator_included else 'Excluded'
+        
+        st.markdown("**EV Charging**")
+        ev_excluded = st.checkbox("Excluded", value=True, key="ev_excl")
+        ev_included = st.checkbox("Included", key="ev_incl")
+        ev_charging = 'Included' if ev_included else 'Excluded'
+        
+        if ev_included:
             ev_ready_spaces = st.text_input("EV Ready Spaces", placeholder="10")
             ev_capable_spaces = st.text_input("EV Capable Spaces", placeholder="20")
         else:
@@ -1141,12 +1181,23 @@ with tab3:
         
         st.markdown("---")
         st.subheader("🔥 Fire Protection")
-        fire_pump = st.selectbox("Fire Pump", ["Excluded", "Included"])
+        fire_pump_excluded = st.checkbox("Fire Pump Excluded", value=True, key="fp_excl")
+        fire_pump_included = st.checkbox("Fire Pump Included", key="fp_incl")
+        fire_pump = 'Included' if fire_pump_included else 'Excluded'
         
         st.markdown("---")
         st.subheader("🏗️ Revit Standards")
         weekly_meetings = st.checkbox("Weekly Meetings", value=True)
-        revit_lod = st.selectbox("Revit LOD", ["200", "300", "350", "400"], index=1)
+        
+        st.markdown("**Revit LOD**")
+        lod_200 = st.checkbox("200", key="lod_200")
+        lod_300 = st.checkbox("300", value=True, key="lod_300")
+        lod_350 = st.checkbox("350", key="lod_350")
+        lod_400 = st.checkbox("400", key="lod_400")
+        
+        lod_options = {'200': lod_200, '300': lod_300, '350': lod_350, '400': lod_400}
+        revit_lod = next((k for k, v in lod_options.items() if v), '300')
+        
         revit_coordination_hours = st.text_input("Revit Coordination Hours", placeholder="Optional")
 
 with tab4:
