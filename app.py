@@ -145,15 +145,21 @@ def add_header_with_logo(section, page_num=1):
         # Fallback to text logo
         add_text_logo(p)
     
-    # Add page number on right side - 11pt Arial, right justified against margin
-    # Tab stop at 6.5" for right alignment
+    # Add tab stop at right margin (6.5") for page number
     tab_stops = p.paragraph_format.tab_stops
     tab_stops.add_tab_stop(Inches(6.5), WD_TAB_ALIGNMENT.RIGHT)
     
-    # Add tab and page number field (auto-updates)
+    # Add tab to move to right margin
     p.add_run("\t")
     
-    # Create page number field that auto-updates
+    # Add "Page " text (not italicized)
+    run_text = p.add_run("Page ")
+    run_text.font.size = Pt(11)
+    run_text.font.name = 'Arial'
+    run_text.font.italic = False
+    run_text.font.bold = False
+    
+    # Create auto-updating page number field (italicized)
     fldChar1 = OxmlElement('w:fldChar')
     fldChar1.set(qn('w:fldCharType'), 'begin')
     
@@ -164,20 +170,17 @@ def add_header_with_logo(section, page_num=1):
     fldChar2 = OxmlElement('w:fldChar')
     fldChar2.set(qn('w:fldCharType'), 'end')
     
-    # Create run for page number
+    # Create run for the page number field
     run_page = p.add_run()
     run_page.font.size = Pt(11)
     run_page.font.name = 'Arial'
+    run_page.font.italic = True  # Italicize the number
     run_page.font.bold = False
     
     # Insert field codes
     run_page._r.append(fldChar1)
     run_page._r.append(instrText)
     run_page._r.append(fldChar2)
-    
-    # Add "Page " prefix before the field
-    p.runs[-2]._r.insert(0, OxmlElement('w:t'))
-    p.runs[-2]._r[0].text = 'Page '
 
 
 def add_text_logo(paragraph):
