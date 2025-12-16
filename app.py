@@ -103,10 +103,10 @@ def format_currency(value):
 
 def setup_styles(doc):
     """Setup proper Word styles for the document"""
-    # Normal style - 9pt Arial per template
+    # Normal style - 11pt Arial to match template
     normal = doc.styles['Normal']
     normal.font.name = 'Arial'
-    normal.font.size = Pt(9)
+    normal.font.size = Pt(11)
     normal.paragraph_format.space_after = Pt(0)
     normal.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
     
@@ -118,9 +118,10 @@ def setup_styles(doc):
     
     bullet_style.base_style = doc.styles['Normal']
     bullet_style.font.name = 'Arial'
-    bullet_style.font.size = Pt(9)
+    bullet_style.font.size = Pt(11)
     bullet_style.paragraph_format.left_indent = Inches(0.25)
     bullet_style.paragraph_format.space_after = Pt(0)
+    bullet_style.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
 
 
 def add_header_with_logo(section):
@@ -286,22 +287,30 @@ def add_section_header(doc, text):
     run.bold = True
     run.underline = True
     run.font.name = 'Arial'
-    run.font.size = Pt(9)
+    run.font.size = Pt(11)
 
 
 def add_paragraph(doc, text, justify=False):
-    """Add a normal paragraph"""
+    """Add a normal paragraph with proper spacing"""
     p = doc.add_paragraph(text)
     p.paragraph_format.space_after = Pt(0)
+    p.paragraph_format.space_before = Pt(0)
+    p.paragraph_format.line_spacing = 1.0
     if justify:
         p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    for run in p.runs:
+        run.font.name = 'Arial'
+        run.font.size = Pt(11)
     return p
 
 
 def add_bullet(doc, text):
-    """Add a standard bullet point"""
+    """Add a standard bullet point with proper Word styling"""
     p = doc.add_paragraph(text, style='List Bullet')
     p.paragraph_format.space_after = Pt(0)
+    p.paragraph_format.space_before = Pt(0)
+    p.paragraph_format.line_spacing = 1.0
+    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     return p
 
 
