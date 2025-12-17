@@ -396,27 +396,32 @@ def calculate_total(data):
 
 
 def create_proposal_document(data):
-    """Generate complete proposal matching template exactly"""
-    doc = Document()
+    """Generate complete proposal using blank template"""
+    # Load the blank template with header/footer already formatted
+    try:
+        doc = Document('Kimley_Horn_Blank_Template.docx')
+    except:
+        # Fallback: create new document if template not found
+        doc = Document()
+        # Setup default styles
+        setup_styles(doc)
+        
+        # Set margins
+        for section in doc.sections:
+            section.top_margin = Inches(1)
+            section.bottom_margin = Inches(0.75)
+            section.left_margin = Inches(1)
+            section.right_margin = Inches(1)
+        
+        # Add header and footer as fallback
+        section = doc.sections[0]
+        add_header_with_logo(section, page_num=1)
+        add_footer(section, "kimley-horn.com", 
+                   "200 Central Avenue Suite 600 St. Petersburg, FL 33701", 
+                   "727-547-3999")
     
-    # Setup styles
-    setup_styles(doc)
-    
-    # Set margins
-    for section in doc.sections:
-        section.top_margin = Inches(1)
-        section.bottom_margin = Inches(0.75)
-        section.left_margin = Inches(1)
-        section.right_margin = Inches(1)
-    
-    # Add header with hardcoded logo and footer
-    section = doc.sections[0]
-    add_header_with_logo(section, page_num=1)
-    add_footer(section, "kimley-horn.com", 
-               "200 Central Avenue Suite 600 St. Petersburg, FL 33701", 
-               "727-547-3999")
-    
-    # === DOCUMENT CONTENT ===
+    # === WRITE CONTENT TO BLANK TEMPLATE ===
+    # Template already has header/footer, just write content
     
     # Add 2 blank lines after header before date
     doc.add_paragraph()  # First blank line
