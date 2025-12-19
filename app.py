@@ -1,4 +1,152 @@
-"""
+def add_footer(section, text_left, text_center, text_right):
+    """Add 3-column footer - NO gaps, single line address, exact measurements"""
+    footer = section.footer
+    footer.is_linked_to_previous = False
+    
+    # Create table with standard method and width parameter
+    table = footer.add_table(rows=1, cols=3, width=Inches(6.29))
+    table.autofit = False
+    
+    # Set exact column widths
+    table.columns[0].width = Inches(1.1)
+    table.columns[1].width = Inches(4.23)
+    table.columns[2].width = Inches(0.96)
+    
+    cells = table.rows[0].cells
+    
+    # Colors from your screenshots
+    grey_fill = 'A8A8A8'
+    red_fill = 'BF8F96'
+    
+    # Configure each cell with advanced XML
+    cell_data = [
+        (cells[0], text_left, grey_fill),
+        (cells[1], text_center, red_fill),
+        (cells[2], text_right, red_fill)
+    ]
+    
+    for cell, text, bg_color in cell_data:
+        # Set text
+        cell.text = text
+        
+        # Get cell properties
+        tcPr = cell._tc.get_or_add_tcPr()
+        
+        # Background color (create fresh element each time)
+        shd = OxmlElement('w:shd')
+        shd.set(qn('w:fill'), bg_color)
+        tcPr.append(shd)
+        
+        # No wrap - CRITICAL for keeping address on one line
+        noWrap = OxmlElement('w:noWrap')
+        tcPr.append(noWrap)
+        
+        # Vertical alignment center
+        vAlign = OxmlElement('w:vAlign')
+        vAlign.set(qn('w:val'), 'center')
+        tcPr.append(vAlign)
+        
+        # Tight cell margins (twips: 144 = 0.1")
+        tcMar = OxmlElement('w:tcMar')
+        for margin_name, value in [('top', '20'), ('start', '40'), ('bottom', '20'), ('end', '40')]:
+            margin = OxmlElement(f'w:{margin_name}')
+            margin.set(qn('w:w'), value)
+            margin.set(qn('w:type'), 'dxa')
+            tcMar.append(margin)
+        tcPr.append(tcMar)
+        
+        # Format text - 8pt Arial white, centered
+        for paragraph in cell.paragraphs:
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            paragraph.paragraph_format.space_before = Pt(0)
+            paragraph.paragraph_format.space_after = Pt(0)
+            paragraph.paragraph_format.line_spacing = 1.0
+            for run in paragraph.runs:
+                run.font.size = Pt(8)
+                run.font.color.rgb = RGBColor(255, 255, 255)
+                run.font.name = 'Arial'
+                run.font.bold = False
+    
+    # Remove ALL table borders
+    tbl = table._tbl
+    tblPr = tbl.tblPr if tbl.tblPr is not None else OxmlElement('w:tblPr')
+    tblBorders = OxmlElement('w:tblBorders')
+    for border_name in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
+        border = OxmlElement(f'w:{border_name}')
+        border.set(qn('w:val'), 'none')
+        border.set(qn('w:sz'), '0')
+        tblBorders.append(border)
+    tblPr.append(tblBorders)
+    if tbl.tblPr is None:
+        tbl.insert(0, tblPr)def add_header_with_logo(section, page_num=1):
+    """Add header with centered logo and right-aligned page number"""
+    header = section.header
+    header.is_linked_to_previous = False
+    
+    # Create table for positioning: logo (left/center) | page number (right)
+    header_table = header.add_table(rows=1, cols=2, width=Inches(6.5))
+    header_table.autofit = False
+    header_table.columns[0].width = Inches(5.0)  # Logo column
+    header_table.columns[1].width = Inches(1.5)  # Page number column
+    
+    # Remove all table borders
+    tbl = header_table._tbl
+    tblPr = tbl.tblPr if tbl.tblPr is not None else OxmlElement('w:tblPr')
+    tblBorders = OxmlElement('w:tblBorders')
+    for border_name in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
+        border = OxmlElement(f'w:{border_name}')
+        border.set(qn('w:val'), 'none')
+        tblBorders.append(border)
+    tblPr.append(tblBorders)
+    if tbl.tblPr is None:
+        tbl.insert(0, tblPr)
+    
+    # Left cell: Logo (centered)
+    logo_cell = header_table.cell(0, 0)
+    logo_para = logo_cell.paragraphs[0]
+    logo_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # Try to use hardcoded logo image
+    logo_stream = get_logo_from_base64()
+    if logo_stream:
+        try:
+            run = logo_para.add_run()
+            run.add_picture(logo_stream, width=Inches(2.0))
+        except:
+            add_text_logo(logo_para)
+    else:
+        add_text_logo(logo_para)
+    
+    # Right cell: Page number (right-aligned, italic)
+    page_cell = header_table.cell(0, 1)
+    page_para = page_cell.paragraphs[0]
+    page_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    
+    # Add "Page " text
+    run_text = page_para.add_run("Page ")
+    run_text.font.name = 'Arial'
+    run_text.font.size = Pt(11)
+    run_text.font.italic = True
+    
+    # Add auto-updating page number field
+    run_field = page_para.add_run()
+    fldChar1 = OxmlElement('w:fldChar')
+    fldChar1.set(qn('w:fldCharType'), 'begin')
+    
+    instrText = OxmlElement('w:instrText')
+    instrText.set(qn('xml:space'), 'preserve')
+    instrText.text = ' PAGE '
+    
+    fldChar2 = OxmlElement('w:fldChar')
+    fldChar2.set(qn('w:fldCharType'), 'separate')
+    
+    fldChar3 = OxmlElement('w:fldChar')
+    fldChar3.set(qn('w:fldCharType'), 'end')
+    
+    run_field._r.extend([fldChar1, instrText, fldChar2, fldChar3])
+    run_field.font.name = 'Arial'
+    run_field.font.size = Pt(11)
+    run_field.font.italic = True"""
 MEP Proposal Generator - Complete Template Version
 Kimley-Horn Engineering Services
 Generates professional .docx proposals matching exact template format
