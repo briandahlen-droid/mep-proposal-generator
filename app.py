@@ -174,12 +174,15 @@ def add_header_with_logo(section, page_num=1):
     run_field._r.extend([fldChar1, instrText, fldChar2, fldChar3])
     run_field.font.name = 'Arial'
     run_field.font.size = Pt(11)
-    run_field.font.italic = True"""
-MEP Proposal Generator - Complete Template Version
-Kimley-Horn Engineering Services
-Generates professional .docx proposals matching exact template format
-Version 3.0 - Complete Template Implementation
-"""
+    run_field.font.italic = True
+
+
+    """
+    MEP Proposal Generator - Complete Template Version
+    Kimley-Horn Engineering Services
+    Generates professional .docx proposals matching exact template format
+    Version 3.0 - Complete Template Implementation
+    """
 
 import streamlit as st
 from docx import Document
