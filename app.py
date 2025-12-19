@@ -1,5 +1,5 @@
 def add_footer(section, text_left, text_center, text_right):
-    """Add 3-column footer - NO gaps, single line address, exact measurements"""
+    """Add 3-column footer..."""
     footer = section.footer
     footer.is_linked_to_previous = False
     
