@@ -125,62 +125,74 @@ def setup_styles(doc):
 
 
 def add_header_with_logo(section, page_num=1):
-    """Add header with hardcoded Kimley-Horn logo and auto page number"""
+    """Add header with centered logo and right-aligned page number"""
     header = section.header
     header.is_linked_to_previous = False
     
-    p = header.paragraphs[0] if header.paragraphs else header.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    # Create table for positioning: logo (left/center) | page number (right)
+    header_table = header.add_table(rows=1, cols=2)
+    header_table.autofit = False
+    header_table.columns[0].width = Inches(5.0)  # Logo column
+    header_table.columns[1].width = Inches(1.5)  # Page number column
+    
+    # Remove all table borders
+    tbl = header_table._tbl
+    tblPr = tbl.tblPr if tbl.tblPr is not None else OxmlElement('w:tblPr')
+    tblBorders = OxmlElement('w:tblBorders')
+    for border_name in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
+        border = OxmlElement(f'w:{border_name}')
+        border.set(qn('w:val'), 'none')
+        tblBorders.append(border)
+    tblPr.append(tblBorders)
+    if tbl.tblPr is None:
+        tbl.insert(0, tblPr)
+    
+    # Left cell: Logo (centered)
+    logo_cell = header_table.cell(0, 0)
+    logo_para = logo_cell.paragraphs[0]
+    logo_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
     
     # Try to use hardcoded logo image
     logo_stream = get_logo_from_base64()
     if logo_stream:
         try:
-            run = p.add_run()
-            run.add_picture(logo_stream, width=Inches(2.5))
+            run = logo_para.add_run()
+            run.add_picture(logo_stream, width=Inches(2.0))
         except:
-            # Fallback to text if image fails
-            add_text_logo(p)
+            add_text_logo(logo_para)
     else:
-        # Fallback to text logo
-        add_text_logo(p)
+        add_text_logo(logo_para)
     
-    # Add tab stop at right margin (6.5") for page number
-    tab_stops = p.paragraph_format.tab_stops
-    tab_stops.add_tab_stop(Inches(6.5), WD_TAB_ALIGNMENT.RIGHT)
+    # Right cell: Page number (right-aligned, italic)
+    page_cell = header_table.cell(0, 1)
+    page_para = page_cell.paragraphs[0]
+    page_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     
-    # Add tab to move to right margin
-    p.add_run("\t")
-    
-    # Add "Page " text (not italicized)
-    run_text = p.add_run("Page ")
-    run_text.font.size = Pt(11)
+    # Add "Page " text
+    run_text = page_para.add_run("Page ")
     run_text.font.name = 'Arial'
-    run_text.font.italic = False
-    run_text.font.bold = False
+    run_text.font.size = Pt(11)
+    run_text.font.italic = True
     
-    # Create auto-updating page number field (italicized)
+    # Add auto-updating page number field
+    run_field = page_para.add_run()
     fldChar1 = OxmlElement('w:fldChar')
     fldChar1.set(qn('w:fldCharType'), 'begin')
     
     instrText = OxmlElement('w:instrText')
     instrText.set(qn('xml:space'), 'preserve')
-    instrText.text = 'PAGE'
+    instrText.text = ' PAGE '
     
     fldChar2 = OxmlElement('w:fldChar')
-    fldChar2.set(qn('w:fldCharType'), 'end')
+    fldChar2.set(qn('w:fldCharType'), 'separate')
     
-    # Create run for the page number field
-    run_page = p.add_run()
-    run_page.font.size = Pt(11)
-    run_page.font.name = 'Arial'
-    run_page.font.italic = True  # Italicize the number
-    run_page.font.bold = False
+    fldChar3 = OxmlElement('w:fldChar')
+    fldChar3.set(qn('w:fldCharType'), 'end')
     
-    # Insert field codes
-    run_page._r.append(fldChar1)
-    run_page._r.append(instrText)
-    run_page._r.append(fldChar2)
+    run_field._r.extend([fldChar1, instrText, fldChar2, fldChar3])
+    run_field.font.name = 'Arial'
+    run_field.font.size = Pt(11)
+    run_field.font.italic = True
 
 
 def add_text_logo(paragraph):
