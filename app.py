@@ -309,7 +309,7 @@ def add_header_with_logo(section, page_num=1):
     header.is_linked_to_previous = False
     
     # Create table for positioning: logo (left/center) | page number (right)
-    header_table = header.add_table(rows=1, cols=2)
+    header_table = header.add_table(rows=1, cols=2, width=Inches(6.5))
     header_table.autofit = False
     header_table.columns[0].width = Inches(5.0)  # Logo column
     header_table.columns[1].width = Inches(1.5)  # Page number column
