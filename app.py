@@ -80,7 +80,7 @@ def add_footer(section, text_left, text_center, text_right):
     if tbl.tblPr is None:
         tbl.insert(0, tblPr)
 
-        def add_text_logo(paragraph):         
+def add_text_logo(paragraph):         
     """Add text-based logo as fallback - Arial Narrow"""
     # Clear any existing content first
     paragraph.clear()
