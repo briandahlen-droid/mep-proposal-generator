@@ -78,7 +78,31 @@ def add_footer(section, text_left, text_center, text_right):
         tblBorders.append(border)
     tblPr.append(tblBorders)
     if tbl.tblPr is None:
-        tbl.insert(0, tblPr)def add_header_with_logo(section, page_num=1):
+        tbl.insert(0, tblPr)def add_text_logo(paragraph):
+    """Add text-based logo as fallback - Arial Narrow"""
+    # Clear any existing content first
+    paragraph.clear()
+    
+    run1 = paragraph.add_run("Kimley")
+    run1.font.size = Pt(28)
+    run1.font.bold = False
+    run1.font.color.rgb = RGBColor(88, 89, 91)
+    run1.font.name = 'Arial Narrow'
+    
+    run2 = paragraph.add_run("»")
+    run2.font.size = Pt(28)
+    run2.font.bold = False
+    run2.font.color.rgb = RGBColor(88, 89, 91)
+    run2.font.name = 'Arial Narrow'
+    
+    run3 = paragraph.add_run("Horn")
+    run3.font.size = Pt(28)
+    run3.font.bold = False
+    run3.font.color.rgb = RGBColor(166, 25, 46)
+    run3.font.name = 'Arial Narrow'
+
+
+def add_header_with_logo(section, page_num=1):
     """Add header with centered logo and right-aligned page number"""
     header = section.header
     header.is_linked_to_previous = False
