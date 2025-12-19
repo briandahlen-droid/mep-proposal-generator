@@ -1,85 +1,147 @@
+"""
+MEP Proposal Generator - Complete Template Version
+Kimley-Horn Engineering Services
+Generates professional .docx proposals matching exact template format
+Version 3.0 - Complete Template Implementation
+"""
+
+import streamlit as st
+from docx import Document
+from docx.shared import Pt, Inches, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT, WD_LINE_SPACING
+from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL, WD_ROW_HEIGHT_RULE, WD_CELL_VERTICAL_ALIGNMENT
+from docx.enum.style import WD_STYLE_TYPE
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
+from datetime import datetime
+from io import BytesIO
+import re
+import os
+import base64
+
+# Hardcoded Kimley-Horn logo (base64 encoded)
+# This will be embedded directly in every document
+KIMLEY_HORN_LOGO_BASE64 = """
+iVBORw0KGgoAAAANSUhEUgAAAhwAAACDCAYAAADGUcLDAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAALiMAAC4jAXilP3YAANaTSURBVHhe7P13vCZlff+PP68yM3c5bXfZpYOACNIsQRRUFIlYgoktUWOiJmqSj4nGfPz+YiwxsUSjSUw0zRosgKKoiL1XbChI7yC9bDt7zrnLzFzl98d1XXPmHBZ2ZSHqx/u1j3mcc+6de+aa67ruer+udxXOOc8EE0wwwQQTTDDBfQi5+oMJJphgggkmmGCCexsTwjHBBBNMMMEEE9znmBCOCSaYYIIJJpjgPseEcEwwwQQTTDDBBPc5JoRjggkmmGCCCSa4zzEhHBNMMMEEE0wwwX2OCeGYYIIJJphgggnuc0wIxwQTTDDBBBNMcJ9jQjgmmGCCCSaYYIL7HBPCMcEEE0wwwQQT3OeYEI4JJphgggkmmOA+x4RwTDDBBBNMMMEE9zkmhGOCCSaYYIIJJrjPMSEcE0wwwQQTTDDBfQ4xKU8/wQQTTHDP4QWI1ira/p34/+nn6v9b/beLW8DVn6drrP58V5GuCyC8W/H3Xe1HQxscAF6Ac1a3675q7wS/2pBCCIQIs8N7j/crZ4j3nrqum3OEEBhjALDWrjj3nsA5hxCiuYcxpmlDuufdQQiBtbb5bvtZjDFUtQUhsA4QAmM9CNF85pzDe09VVVRVheqP0Wh0p76Y4B5ACJwX1MY1/e8J/Z8+G5d183+XXX4lnz77s3znu98N4zTBBC14sfIIgi8IP6KA2/4hEF4Aq49dg0fgmnaltjhwDiyAoC4NHoH1gsrUWO+w3uC9DV+0gPXgPQ6HwYK3CBx1XeKweDzjeoxzDlsbjLNYv/zc9wReQI1jaEtqV2O9wXiDw2HjP4/AIzAIDB7rPcbVeCwIj8VSprW7qrE2tMtiqV3d9ImIxwS/3hDGGE8U3EKIhnSkI8synHMYY1BKAZDnOc45rLXkeb5rReHWP0ajEXmeN9eU69Z1jTGGTqfT3FvKwDiXlpaoqug30+l0UCrzY58ShljLsmIymbBlyxaqumQ8GpPnOZ1Oh/F4zGQyodPpMBgM6PV6AAwGA4qiQGsNkbhMcM8xLms6nRznQEooyxppNZs2bmTLli1cccUVfvPmzdx2221cccUVlGUJwMzMDKeccgpFHsZhgglYtSOHsCsP2P5OexlxI3InjnGXX9gpeAQu3lQmweoAG7UDxmOUwGcKBAg
+"""
+
+def get_logo_from_base64():
+    """Convert base64 logo to BytesIO object for embedding"""
+    try:
+        logo_data = base64.b64decode(KIMLEY_HORN_LOGO_BASE64.strip())
+        return BytesIO(logo_data)
+    except:
+        return None
+
 def add_footer(section, text_left, text_center, text_right):
-    """Add 3-column footer..."""
+    """
+    Add 3-column colored footer with exact Kimley-Horn specifications.
+    Uses validated research approach: 5-column table (3 content + 2 white gaps).
+    Specifications: 1.1" | 0.01" gap | 4.23" | 0.01" gap | 0.96"
+    Row height: 0.22" exactly | Cell margins: 20 twips vertical, 40 twips horizontal
+    """
     footer = section.footer
     footer.is_linked_to_previous = False
     
-    # Create table with standard method - MUST include width parameter
-    total_width = Inches(6.29)  # Sum of all columns: 1.1 + 4.23 + 0.96
-    table = footer.add_table(rows=1, cols=3, width=total_width)
-    table.autofit = False
+    # Kimley-Horn specifications - 5 columns (3 content + 2 gaps)
+    widths = [Inches(1.1), Inches(0.01), Inches(4.23), Inches(0.01), Inches(0.96)]
+    colors = ['5F5F5F', None, 'A20C33', None, 'A20C33']  # Dark grey, gap, dark red, gap, dark red
+    texts = [text_left, '', text_center, '', text_right]
     
-    # Set exact column widths
-    table.columns[0].width = Inches(1.1)
-    table.columns[1].width = Inches(4.23)
-    table.columns[2].width = Inches(0.96)
+    # Create table
+    total_width = sum(widths)
+    table = footer.add_table(rows=1, cols=5, width=total_width)
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    table.allow_autofit = False
     
-    cells = table.rows[0].cells
+    # Set row height - EXACTLY 0.22"
+    row = table.rows[0]
+    row.height = Inches(0.22)
+    row.height_rule = WD_ROW_HEIGHT_RULE.EXACTLY
     
-    # Colors from your screenshots
-    grey_fill = 'A8A8A8'
-    red_fill = 'BF8F96'
-    
-    # Configure each cell with advanced XML
-    cell_data = [
-        (cells[0], text_left, grey_fill),
-        (cells[1], text_center, red_fill),
-        (cells[2], text_right, red_fill)
-    ]
-    
-    for cell, text, bg_color in cell_data:
-        # Set text
-        cell.text = text
-        
-        # Get cell properties
-        tcPr = cell._tc.get_or_add_tcPr()
-        
-        # Background color (create fresh element each time)
-        shd = OxmlElement('w:shd')
-        shd.set(qn('w:fill'), bg_color)
-        tcPr.append(shd)
-        
-        # No wrap - CRITICAL for keeping address on one line
-        noWrap = OxmlElement('w:noWrap')
-        tcPr.append(noWrap)
-        
-        # Vertical alignment center
-        vAlign = OxmlElement('w:vAlign')
-        vAlign.set(qn('w:val'), 'center')
-        tcPr.append(vAlign)
-        
-        # Tight cell margins (twips: 144 = 0.1")
-        tcMar = OxmlElement('w:tcMar')
-        for margin_name, value in [('top', '20'), ('start', '40'), ('bottom', '20'), ('end', '40')]:
-            margin = OxmlElement(f'w:{margin_name}')
-            margin.set(qn('w:w'), value)
-            margin.set(qn('w:type'), 'dxa')
-            tcMar.append(margin)
-        tcPr.append(tcMar)
-        
-        # Format text - 8pt Arial white, centered
-        for paragraph in cell.paragraphs:
-            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            paragraph.paragraph_format.space_before = Pt(0)
-            paragraph.paragraph_format.space_after = Pt(0)
-            paragraph.paragraph_format.line_spacing = 1.0
-            for run in paragraph.runs:
-                run.font.size = Pt(8)
-                run.font.color.rgb = RGBColor(255, 255, 255)
-                run.font.name = 'Arial'
-                run.font.bold = False
-    
-    # Remove ALL table borders
+    # Remove all table borders for seamless appearance
     tbl = table._tbl
     tblPr = tbl.tblPr if tbl.tblPr is not None else OxmlElement('w:tblPr')
+    existing_borders = tblPr.find(qn('w:tblBorders'))
+    if existing_borders is not None:
+        tblPr.remove(existing_borders)
     tblBorders = OxmlElement('w:tblBorders')
     for border_name in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
         border = OxmlElement(f'w:{border_name}')
-        border.set(qn('w:val'), 'none')
-        border.set(qn('w:sz'), '0')
+        border.set(qn('w:val'), 'nil')
         tblBorders.append(border)
     tblPr.append(tblBorders)
     if tbl.tblPr is None:
         tbl.insert(0, tblPr)
+    
+    # Configure each cell
+    for idx, cell in enumerate(row.cells):
+        # Set widths (both column and cell for LibreOffice compatibility)
+        table.columns[idx].width = widths[idx]
+        cell.width = widths[idx]
+        
+        # Apply background color if specified (skip gap columns)
+        if colors[idx]:
+            tc = cell._tc
+            tcPr = tc.get_or_add_tcPr()
+            
+            # Remove existing shading to avoid duplicates
+            existing_shd = tcPr.find(qn('w:shd'))
+            if existing_shd is not None:
+                tcPr.remove(existing_shd)
+            
+            shd = OxmlElement('w:shd')
+            shd.set(qn('w:val'), 'clear')
+            shd.set(qn('w:color'), 'auto')
+            shd.set(qn('w:fill'), colors[idx])
+            tcPr.append(shd)
+            
+            # Set cell margins - tight for content columns
+            existing_mar = tcPr.find(qn('w:tcMar'))
+            if existing_mar is not None:
+                tcPr.remove(existing_mar)
+            
+            tcMar = OxmlElement('w:tcMar')
+            for margin_name, value in [('top', '20'), ('bottom', '20'), ('start', '40'), ('end', '40')]:
+                margin = OxmlElement(f'w:{margin_name}')
+                margin.set(qn('w:w'), value)
+                margin.set(qn('w:type'), 'dxa')
+                tcMar.append(margin)
+            tcPr.append(tcMar)
+        else:
+            # Gap columns - zero margins
+            tc = cell._tc
+            tcPr = tc.get_or_add_tcPr()
+            
+            existing_mar = tcPr.find(qn('w:tcMar'))
+            if existing_mar is not None:
+                tcPr.remove(existing_mar)
+            
+            tcMar = OxmlElement('w:tcMar')
+            for margin_name in ['top', 'bottom', 'start', 'end']:
+                margin = OxmlElement(f'w:{margin_name}')
+                margin.set(qn('w:w'), '0')
+                margin.set(qn('w:type'), 'dxa')
+                tcMar.append(margin)
+            tcPr.append(tcMar)
+        
+        # Vertical alignment - use native API
+        cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+        
+        # Text formatting (only for content columns)
+        if texts[idx]:
+            para = cell.paragraphs[0]
+            para.paragraph_format.space_before = Pt(0)
+            para.paragraph_format.space_after = Pt(0)
+            para.paragraph_format.line_spacing = 1.0
+            para.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            para.clear()
+            
+            run = para.add_run(texts[idx])
+            run.font.name = 'Arial'
+            run.font.size = Pt(8)
+            run.font.bold = False
+            run.font.color.rgb = RGBColor(255, 255, 255)
 
 
 def add_text_logo(paragraph):
@@ -107,7 +169,7 @@ def add_text_logo(paragraph):
 
 
 def add_header_with_logo(section, page_num=1):
-    """Add header with centered logo and right-aligned page number"""
+    """Add header with left-aligned logo and right-aligned page number"""
     header = section.header
     header.is_linked_to_previous = False
     
@@ -129,10 +191,11 @@ def add_header_with_logo(section, page_num=1):
     if tbl.tblPr is None:
         tbl.insert(0, tblPr)
     
-    # Left cell: Logo (centered)
+    # Left cell: Logo (left-aligned)
     logo_cell = header_table.cell(0, 0)
+    logo_cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
     logo_para = logo_cell.paragraphs[0]
-    logo_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    logo_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
     
     # Try to use hardcoded logo image
     logo_stream = get_logo_from_base64()
@@ -147,6 +210,7 @@ def add_header_with_logo(section, page_num=1):
     
     # Right cell: Page number (right-aligned, italic)
     page_cell = header_table.cell(0, 1)
+    page_cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
     page_para = page_cell.paragraphs[0]
     page_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     
@@ -177,40 +241,6 @@ def add_header_with_logo(section, page_num=1):
     run_field.font.italic = True
 
 
-    """
-    MEP Proposal Generator - Complete Template Version
-    Kimley-Horn Engineering Services
-    Generates professional .docx proposals matching exact template format
-    Version 3.0 - Complete Template Implementation
-    """
-
-import streamlit as st
-from docx import Document
-from docx.shared import Pt, Inches, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT, WD_LINE_SPACING
-from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
-from docx.enum.style import WD_STYLE_TYPE
-from docx.oxml.ns import qn
-from docx.oxml import OxmlElement
-from datetime import datetime
-from io import BytesIO
-import re
-import os
-import base64
-
-# Hardcoded Kimley-Horn logo (base64 encoded)
-# This will be embedded directly in every document
-KIMLEY_HORN_LOGO_BASE64 = """
-iVBORw0KGgoAAAANSUhEUgAAAhwAAACDCAYAAADGUcLDAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAALiMAAC4jAXilP3YAANaTSURBVHhe7P13vCZlff+PP68yM3c5bXfZpYOACNIsQRRUFIlYgoktUWOiJmqSj4nGfPz+YiwxsUSjSUw0zRosgKKoiL1XbChI7yC9bDt7zrnLzFzl98d1XXPmHBZ2ZSHqx/u1j3mcc+6de+aa67ruer+udxXOOc8EE0wwwQQTTDDBfQi5+oMJJphgggkmmGCCexsTwjHBBBNMMMEEE9znmBCOCSaYYIIJJpjgPseEcEwwwQQTTDDBBPc5JoRjggkmmGCCCSa4zzEhHBNMMMEEE0wwwX2OCeGYYIIJJphgggnuc0wIxwQTTDDBBBNMcJ9jQjgmmGCCCSaYYIL7HBPCMcEEE0wwwQQT3OeYEI4JJphgggkmmOA+x4RwTDDBBBNMMMEE9zkmhGOCCSaYYIIJJrjPMSEcE0wwwQQTTDDBfQ4xKU8/wQQTTHDP4QWI1ira/p34/+nn6v9b/beLW8DVn6drrP58V5GuCyC8W/H3Xe1HQxscAF6Ac1a3675q7wS/2pBCCIQIs8N7j/crZ4j3nrqum3OEEBhjALDWrjj3nsA5hxCiuYcxpmlDuufdQQiBtbb5bvtZjDFUtQUhsA4QAmM9CNF85pzDe09VVVRVheqP0Wh0p76Y4B5ACJwX1MY1/e8J/Z8+G5d183+XXX4lnz77s3znu98N4zTBBC14sfIIgi8IP6KA2/4hEF4Aq49dg0fgmnaltjhwDiyAoC4NHoH1gsrUWO+w3uC9DV+0gPXgPQ6HwYK3CBx1XeKweDzjeoxzDlsbjLNYv/zc9wReQI1jaEtqV2O9wXiDw2HjP4/AIzAIDB7rPcbVeCwIj8VSprW7qrE2tMtiqV3d9ImIxwS/3hDGGE8U3EKIhnSkI8synHMYY1BKAZDnOc45rLXkeb5rReHWP0ajEXmeN9eU69Z1jTGGTqfT3FvKwDiXlpaoqug30+l0UCrzY58ShljLsmIymbBlyxaqumQ8GpPnOZ1Oh/F4zGQyodPpMBgM6PV6AAwGA4qiQGsNkbhMcM8xLms6nRznQEooyxppNZs2bmTLli1cccUVfvPmzdx2221cccUVlGUJwMzMDKeccgpFHsZhgglYtSOHsCsP2P5OexlxI3InjnGXX9gpeAQu3lQmweoAG7UDxmOUwGcKBAg
-"""
-
-def get_logo_from_base64():
-    """Convert base64 logo to BytesIO object for embedding"""
-    try:
-        logo_data = base64.b64decode(KIMLEY_HORN_LOGO_BASE64.strip())
-        return BytesIO(logo_data)
-    except:
-        return None
 
 # Page config
 st.set_page_config(
@@ -303,207 +333,6 @@ def setup_styles(doc):
     bullet_style.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
 
 
-def add_header_with_logo(section, page_num=1):
-    """Add header with centered logo and right-aligned page number"""
-    header = section.header
-    header.is_linked_to_previous = False
-    
-    # Create table for positioning: logo (left/center) | page number (right)
-    header_table = header.add_table(rows=1, cols=2, width=Inches(6.5))
-    header_table.autofit = False
-    header_table.columns[0].width = Inches(5.0)  # Logo column
-    header_table.columns[1].width = Inches(1.5)  # Page number column
-    
-    # Remove all table borders
-    tbl = header_table._tbl
-    tblPr = tbl.tblPr if tbl.tblPr is not None else OxmlElement('w:tblPr')
-    tblBorders = OxmlElement('w:tblBorders')
-    for border_name in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
-        border = OxmlElement(f'w:{border_name}')
-        border.set(qn('w:val'), 'none')
-        tblBorders.append(border)
-    tblPr.append(tblBorders)
-    if tbl.tblPr is None:
-        tbl.insert(0, tblPr)
-    
-    # Left cell: Logo (centered)
-    logo_cell = header_table.cell(0, 0)
-    logo_para = logo_cell.paragraphs[0]
-    logo_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    
-    # Try to use hardcoded logo image
-    logo_stream = get_logo_from_base64()
-    if logo_stream:
-        try:
-            run = logo_para.add_run()
-            run.add_picture(logo_stream, width=Inches(2.0))
-        except:
-            add_text_logo(logo_para)
-    else:
-        add_text_logo(logo_para)
-    
-    # Right cell: Page number (right-aligned, italic)
-    page_cell = header_table.cell(0, 1)
-    page_para = page_cell.paragraphs[0]
-    page_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    
-    # Add "Page " text
-    run_text = page_para.add_run("Page ")
-    run_text.font.name = 'Arial'
-    run_text.font.size = Pt(11)
-    run_text.font.italic = True
-    
-    # Add auto-updating page number field
-    run_field = page_para.add_run()
-    fldChar1 = OxmlElement('w:fldChar')
-    fldChar1.set(qn('w:fldCharType'), 'begin')
-    
-    instrText = OxmlElement('w:instrText')
-    instrText.set(qn('xml:space'), 'preserve')
-    instrText.text = ' PAGE '
-    
-    fldChar2 = OxmlElement('w:fldChar')
-    fldChar2.set(qn('w:fldCharType'), 'separate')
-    
-    fldChar3 = OxmlElement('w:fldChar')
-    fldChar3.set(qn('w:fldCharType'), 'end')
-    
-    run_field._r.extend([fldChar1, instrText, fldChar2, fldChar3])
-    run_field.font.name = 'Arial'
-    run_field.font.size = Pt(11)
-    run_field.font.italic = True
-
-
-def add_text_logo(paragraph):
-    """Add text-based logo as fallback - Arial Narrow"""
-    run1 = paragraph.add_run("Kimley")
-    run1.font.size = Pt(28)
-    run1.font.bold = False
-    run1.font.color.rgb = RGBColor(88, 89, 91)
-    run1.font.name = 'Arial Narrow'
-    
-    run2 = paragraph.add_run("»")
-    run2.font.size = Pt(28)
-    run2.font.bold = False
-    run2.font.color.rgb = RGBColor(88, 89, 91)
-    run2.font.name = 'Arial Narrow'
-    
-    run3 = paragraph.add_run("Horn")
-    run3.font.size = Pt(28)
-    run3.font.bold = False
-    run3.font.color.rgb = RGBColor(166, 25, 46)
-    run3.font.name = 'Arial Narrow'
-
-
-def add_footer(section, text_left, text_center, text_right):
-    """Add colored footer with exact specs: Col1=1.1", Col2=4.23", Col3=0.96", Height=0.22", with 0.01" white gaps"""
-    footer = section.footer
-    footer.is_linked_to_previous = False
-    
-    # Create table with 5 columns (3 content + 2 white gaps of 0.01" each)
-    gap_width = Inches(0.01)  # Tiny white space between colored sections
-    total_width = Inches(1.1) + gap_width + Inches(4.23) + gap_width + Inches(0.96)
-    
-    table = footer.add_table(rows=1, cols=5, width=total_width)
-    table.alignment = WD_TABLE_ALIGNMENT.CENTER
-    table.autofit = False
-    
-    # Set exact column widths
-    table.columns[0].width = Inches(1.1)      # Grey section
-    table.columns[1].width = gap_width        # White gap (0.01")
-    table.columns[2].width = Inches(4.23)     # Red/mauve section (address)
-    table.columns[3].width = gap_width        # White gap (0.01")
-    table.columns[4].width = Inches(0.96)     # Red/mauve section (phone)
-    
-    cells = table.rows[0].cells
-    
-    # Set row height to exactly 0.22"
-    row = table.rows[0]
-    row.height = Inches(0.22)
-    
-    # Colors
-    grey_fill = 'ABABAB'
-    red_fill = 'BF8F96'
-    
-    def set_cell_margins(cell, tight=True):
-        tc = cell._tc
-        tcPr = tc.get_or_add_tcPr()
-        tcMar = OxmlElement('w:tcMar')
-        if tight:
-            for margin_name in ['top', 'bottom']:
-                margin = OxmlElement(f'w:{margin_name}')
-                margin.set(qn('w:w'), '20')
-                margin.set(qn('w:type'), 'dxa')
-                tcMar.append(margin)
-            for margin_name in ['left', 'right']:
-                margin = OxmlElement(f'w:{margin_name}')
-                margin.set(qn('w:w'), '40')
-                margin.set(qn('w:type'), 'dxa')
-                tcMar.append(margin)
-        else:
-            for margin_name in ['top', 'bottom', 'left', 'right']:
-                margin = OxmlElement(f'w:{margin_name}')
-                margin.set(qn('w:w'), '0')
-                margin.set(qn('w:type'), 'dxa')
-                tcMar.append(margin)
-        tcPr.append(tcMar)
-    
-    def set_cell_color_and_text(cell, text, fill_color):
-        """Set cell background color and text"""
-        cell.text = text
-        
-        cell_shading = OxmlElement('w:shd')
-        cell_shading.set(qn('w:fill'), fill_color)
-        cell._tc.get_or_add_tcPr().append(cell_shading)
-        
-        tc = cell._tc
-        tcPr = tc.get_or_add_tcPr()
-        vAlign = OxmlElement('w:vAlign')
-        vAlign.set(qn('w:val'), 'center')
-        tcPr.append(vAlign)
-        
-        for paragraph in cell.paragraphs:
-            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            paragraph.paragraph_format.space_before = Pt(0)
-            paragraph.paragraph_format.space_after = Pt(0)
-            paragraph.paragraph_format.line_spacing = 1.0
-            for run in paragraph.runs:
-                run.font.size = Pt(8)
-                run.font.color.rgb = RGBColor(255, 255, 255)
-                run.font.name = 'Arial'
-                run.font.bold = False
-    
-    # Column 0: Grey section
-    set_cell_margins(cells[0], tight=True)
-    set_cell_color_and_text(cells[0], text_left, grey_fill)
-    
-    # Column 1: White gap
-    set_cell_margins(cells[1], tight=False)
-    cells[1].text = ""
-    
-    # Column 2: Red/mauve section
-    set_cell_margins(cells[2], tight=True)
-    set_cell_color_and_text(cells[2], text_center, red_fill)
-    
-    # Column 3: White gap
-    set_cell_margins(cells[3], tight=False)
-    cells[3].text = ""
-    
-    # Column 4: Red/mauve section
-    set_cell_margins(cells[4], tight=True)
-    set_cell_color_and_text(cells[4], text_right, red_fill)
-    
-    # Remove all table borders
-    tbl = table._tbl
-    tblPr = tbl.tblPr if tbl.tblPr is not None else OxmlElement('w:tblPr')
-    tblBorders = OxmlElement('w:tblBorders')
-    for border_name in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
-        border = OxmlElement(f'w:{border_name}')
-        border.set(qn('w:val'), 'nil')
-        tblBorders.append(border)
-    tblPr.append(tblBorders)
-    if tbl.tblPr is None:
-        tbl.insert(0, tblPr)
 
 
 def add_section_header(doc, text):
