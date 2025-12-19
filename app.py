@@ -3,8 +3,9 @@ def add_footer(section, text_left, text_center, text_right):
     footer = section.footer
     footer.is_linked_to_previous = False
     
-    # Create table with standard method and width parameter
-    table = footer.add_table(rows=1, cols=3, width=Inches(6.29))
+    # Create table with standard method - MUST include width parameter
+    total_width = Inches(6.29)  # Sum of all columns: 1.1 + 4.23 + 0.96
+    table = footer.add_table(rows=1, cols=3, width=total_width)
     table.autofit = False
     
     # Set exact column widths
@@ -78,31 +79,29 @@ def add_footer(section, text_left, text_center, text_right):
         tblBorders.append(border)
     tblPr.append(tblBorders)
     if tbl.tblPr is None:
-        tbl.insert(0, tblPr)
-
-def add_text_logo(paragraph):         
+        tbl.insert(0, tblPr)def add_text_logo(paragraph):
     """Add text-based logo as fallback - Arial Narrow"""
     # Clear any existing content first
     paragraph.clear()
-    
     
     run1 = paragraph.add_run("Kimley")
     run1.font.size = Pt(28)
     run1.font.bold = False
     run1.font.color.rgb = RGBColor(88, 89, 91)
     run1.font.name = 'Arial Narrow'
-        
+    
     run2 = paragraph.add_run("»")
     run2.font.size = Pt(28)
     run2.font.bold = False
     run2.font.color.rgb = RGBColor(88, 89, 91)
     run2.font.name = 'Arial Narrow'
-        
+    
     run3 = paragraph.add_run("Horn")
     run3.font.size = Pt(28)
     run3.font.bold = False
     run3.font.color.rgb = RGBColor(166, 25, 46)
     run3.font.name = 'Arial Narrow'
+
 
 def add_header_with_logo(section, page_num=1):
     """Add header with centered logo and right-aligned page number"""
@@ -172,15 +171,12 @@ def add_header_with_logo(section, page_num=1):
     run_field._r.extend([fldChar1, instrText, fldChar2, fldChar3])
     run_field.font.name = 'Arial'
     run_field.font.size = Pt(11)
-    run_field.font.italic = True
-
-
-    """
-    MEP Proposal Generator - Complete Template Version
-    Kimley-Horn Engineering Services
-    Generates professional .docx proposals matching exact template format
-    Version 3.0 - Complete Template Implementation
-    """
+    run_field.font.italic = True"""
+MEP Proposal Generator - Complete Template Version
+Kimley-Horn Engineering Services
+Generates professional .docx proposals matching exact template format
+Version 3.0 - Complete Template Implementation
+"""
 
 import streamlit as st
 from docx import Document
