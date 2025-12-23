@@ -313,9 +313,10 @@ def add_opening_section(doc, client_info, project_info):
     doc.add_paragraph()
 
 
-def add_project_understanding(doc, project_description):
-    """Add Project Understanding section."""
+def add_project_understanding(doc, project_description, assumptions):
+    """Add Project Understanding section with assumptions."""
     
+    # Section heading - CENTERED
     para = doc.add_paragraph()
     run = para.add_run('PROJECT UNDERSTANDING')
     run.font.name = 'Arial'
@@ -326,8 +327,43 @@ def add_project_understanding(doc, project_description):
     
     doc.add_paragraph()
     
+    # Project description - JUSTIFIED
     para = doc.add_paragraph()
     run = para.add_run(project_description)
+    run.font.name = 'Arial'
+    run.font.size = Pt(11)
+    para.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    para.paragraph_format.space_after = Pt(0)
+    para.paragraph_format.line_spacing = 1.0
+    
+    doc.add_paragraph()
+    
+    # Assumptions intro
+    para = doc.add_paragraph()
+    run = para.add_run('Kimley-Horn understands the following in preparing this proposal:')
+    run.font.name = 'Arial'
+    run.font.size = Pt(11)
+    para.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    para.paragraph_format.space_after = Pt(0)
+    para.paragraph_format.line_spacing = 1.0
+    
+    doc.add_paragraph()
+    
+    # Assumptions as bullet points
+    for assumption in assumptions:
+        para = doc.add_paragraph(style='List Bullet')
+        run = para.add_run(assumption)
+        run.font.name = 'Arial'
+        run.font.size = Pt(11)
+        para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        para.paragraph_format.space_after = Pt(0)
+        para.paragraph_format.line_spacing = 1.0
+    
+    doc.add_paragraph()
+    
+    # Closing statement
+    para = doc.add_paragraph()
+    run = para.add_run('If any of these assumptions are not correct, then the scope and fee will change. Based on the above understanding, Kimley-Horn proposes the following scope of services:')
     run.font.name = 'Arial'
     run.font.size = Pt(11)
     para.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
@@ -456,7 +492,7 @@ def add_scope_table(doc, selected_tasks):
     para.paragraph_format.line_spacing = 1.0
 
 
-def generate_proposal_document(client_info, project_info, selected_tasks, output_path):
+def generate_proposal_document(client_info, project_info, selected_tasks, assumptions, output_path):
     """Generate complete proposal document."""
     
     doc = Document()
@@ -471,7 +507,7 @@ def generate_proposal_document(client_info, project_info, selected_tasks, output
     create_footer(section)
     
     add_opening_section(doc, client_info, project_info)
-    add_project_understanding(doc, project_info['description'])
+    add_project_understanding(doc, project_info['description'], assumptions)
     add_scope_of_services(doc, selected_tasks)
     add_scope_table(doc, selected_tasks)
     
@@ -728,6 +764,27 @@ can_generate = not missing_fields and bool(selected_tasks)
 if st.button("🚀 Generate Proposal Document", type="primary", disabled=not can_generate):
     with st.spinner("Generating proposal document..."):
         try:
+            # Collect assumptions
+            assumptions = []
+            if assume_survey:
+                assumptions.append("Boundary, topographic, and tree survey will be provided by the Client.")
+            if assume_environmental:
+                assumptions.append("An Environmental/Biological assessment and Geotechnical investigation report will be provided by the Client.")
+            if assume_geotech:
+                assumptions.append("A Geotechnical investigation report will be provided by the Client.")
+            if assume_zoning:
+                assumptions.append("The proposed use is consistent with the property's future land use and zoning designations.")
+            if has_conceptual_plan and conceptual_plan_date:
+                assumptions.append(f"This proposal is based on the conceptual site plan dated {conceptual_plan_date}.")
+            if assume_utilities:
+                assumptions.append("Utilities are available at the project boundary and have the capacity to serve the proposed development.")
+            if assume_offsite:
+                assumptions.append("Offsite roadway improvements or right-of-way permitting is not included.")
+            if assume_traffic:
+                assumptions.append("Traffic Study, impact analysis, and traffic counts, if required, will be provided by others.")
+            if assume_one_phase:
+                assumptions.append("The project will be constructed in one (1) phase.")
+            
             client_info = {
                 'name': client_name,
                 'contact': contact_person,
@@ -742,12 +799,15 @@ if st.button("🚀 Generate Proposal Document", type="primary", disabled=not can
                 'name': project_name,
                 'address': project_address,
                 'city_state_zip': project_city_state_zip,
-                'description': project_description
+                'description': project_description,
+                'county': county,
+                'city': city,
+                'parcel_id': parcel_id
             }
             
             buffer = BytesIO()
             temp_path = '/tmp/temp_proposal.docx'
-            generate_proposal_document(client_info, project_info, selected_tasks, temp_path)
+            generate_proposal_document(client_info, project_info, selected_tasks, assumptions, temp_path)
             
             with open(temp_path, 'rb') as f:
                 buffer.write(f.read())
